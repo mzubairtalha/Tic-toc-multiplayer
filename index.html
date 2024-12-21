@@ -3,170 +3,84 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tic Tac Toe</title>
-<style>
-  body {
-  font-family: Arial, sans-serif;
-  background: linear-gradient(to bottom, #4facfe, #00f2fe);
-  background-repeat: no-repeat;
-  color: #fff;
-  text-align: center;
-  margin: 0;
-  padding: 0;
-}
-
-h1, h2 {
-  margin: 10px 0;
-  font-size: 18px;
-  color: #fff;
-  text-shadow: 1px 1px 2px #000;
-}
-
-input {
-  width: 80%;
-  padding: 10px;
-  margin: 10px 0;
-  border: none;
-  border-radius: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  font-size: 14px;
-}
-
-button {
-  padding: 10px 15px;
-  margin: 5px;
-  background-color: #ff6f61;
-  border: none;
-  border-radius: 5px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-button:hover {
-  background-color: #ff3d2e;
-}
-
-#join-game, #waiting-screen, #game-container {
-  display: none;
-}
-
-#join-game {
-  display: block;
-  padding: 20px 0;
-}
-
-#waiting-screen {
-  padding: 30px;
-}
-
-#game-board {
-  margin: 10px auto;
-  width: 180px;
-  border: 2px solid #fff;
-  border-radius: 5px;
-  background-color: #fff;
-}
-
-table {
-  width: 100%;
-  height: 100%;
-  border-collapse: collapse;
-}
-
-td {
-  width: 60px;
-  height: 60px;
-  background-color: #f8f9fa;
-  border: 2px solid #e1e1e1;
-  text-align: center;
-  vertical-align: middle;
-  font-size: 24px;
-  font-weight: bold;
-  color: #333;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-td:hover {
-  background-color: #f0f0f0;
-}
-
-td.taken {
-  cursor: not-allowed;
-  background-color: #ccc;
-}
-
-#vs-display, #current-turn {
-  font-size: 14px;
-  font-weight: bold;
-  margin: 5px 0;
-  color: #fff;
-  text-shadow: 1px 1px 2px #000;
-}
-
-#messages {
-  margin-top: 10px;
-  font-size: 14px;
-  font-weight: bold;
-  color: #ffd700;
-  text-shadow: 1px 1px 2px #000;
-}
-
-button#home-button, button#play-again-button {
-  margin-top: 10px;
-  display: none;
-  }
-  .navItem:focus {
-    border: 2px solid yellow;
-    outline: none;
-}
-</style>
+  <title>Tic Tac Toe Multiplayer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f4f4f4;
+    }
+    #game-container, #waiting-screen {
+      display: none;
+    }
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+    td {
+      width: 50px;
+      height: 50px;
+      border: 1px solid #000;
+      font-size: 24px;
+      text-align: center;
+      vertical-align: middle;
+      cursor: pointer;
+    }
+    td.taken {
+      cursor: not-allowed;
+    }
+    #messages {
+      margin-top: 20px;
+      color: green;
+    }
+    #vs-display {
+      margin-bottom: 10px;
+      font-weight: bold;
+      font-size: 20px;
+    }
+    #current-turn {
+      margin-bottom: 10px;
+      font-size: 18px;
+      color: #333;
+    }
+  </style>
 </head>
 <body>
-<!-- Join Game Section -->
-<div id="join-game">
-  <h1>Welcome to Tic Tac Toe</h1>
-  <input type="text" id="player-name" placeholder="Enter your name" tabIndex="0" class="navItem" />
-  <button id="play-button" tabIndex="0" class="navItem">Play</button>
-</div>
+  <h1>Tic Tac Toe Multiplayer</h1>
+  <div id="join-game">
+    <input type="text" id="player-name" placeholder="Enter your name" />
+    <button id="play-button">Play</button>
+    <button id="cancel-button" style="display: none;">Cancel</button>
+  </div>
 
-<!-- Waiting Screen -->
-<div id="waiting-screen">
-  <h2>Waiting for an opponent...</h2>
-  <button id="cancel-button" tabIndex="0" class="navItem">Cancel</button>
-</div>
+  <div id="waiting-screen">
+    <h2>Waiting for another player...</h2>
+    <p id="timer">Removing in 30 seconds...</p>
+  </div>
 
-<!-- Game Container -->
-<div id="game-container">
-  <div id="vs-display"></div>
-  <div id="current-turn"></div>
-  <table id="game-board">
-    <tr>
-      <td data-cell="0" class="navItem" tabIndex="0"></td>
-      <td data-cell="1" class="navItem" tabIndex="0"></td>
-      <td data-cell="2" class="navItem" tabIndex="0"></td>
-    </tr>
-    <tr>
-      <td data-cell="3" class="navItem" tabIndex="0"></td>
-      <td data-cell="4" class="navItem" tabIndex="0"></td>
-      <td data-cell="5" class="navItem" tabIndex="0"></td>
-    </tr>
-    <tr>
-      <td data-cell="6" class="navItem" tabIndex="0"></td>
-      <td data-cell="7" class="navItem" tabIndex="0"></td>
-      <td data-cell="8" class="navItem" tabIndex="0"></td>
-    </tr>
-  </table>
-  <div id="messages"></div>
-  <button id="home-button" style="display:none;" tabIndex="0" class="navItem">Home</button>
-  <button id="play-again-button" style="display:none;" tabIndex="0" class="navItem">Play Again</button>
-</div>
+  <div id="game-container">
+    <div id="vs-display"></div>
+    <div id="current-turn"></div>
+    <table id="game-board">
+      <tr>
+        <td data-cell="0"></td>
+        <td data-cell="1"></td>
+        <td data-cell="2"></td>
+      </tr>
+      <tr>
+        <td data-cell="3"></td>
+        <td data-cell="4"></td>
+        <td data-cell="5"></td>
+      </tr>
+      <tr>
+        <td data-cell="6"></td>
+        <td data-cell="7"></td>
+        <td data-cell="8"></td>
+      </tr>
+    </table>
+    <div id="messages"></div>
+  </div>
 
-  <!-- Firebase and Game Logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
     import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js";
@@ -180,7 +94,8 @@ button#home-button, button#play-again-button {
       messagingSenderId: "430888007998",
       appId: "1:430888007998:web:8b441ece3ac77af3c7d46f",
       measurementId: "G-Z4TQWZBGZG",
-    };       
+    };
+
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
@@ -189,11 +104,10 @@ button#home-button, button#play-again-button {
     const gameContainer = document.getElementById("game-container");
     const playButton = document.getElementById("play-button");
     const cancelButton = document.getElementById("cancel-button");
-    const homeButton = document.getElementById("home-button");
-    const playAgainButton = document.getElementById("play-again-button");
     const playerNameInput = document.getElementById("player-name");
     const gameBoard = document.getElementById("game-board");
     const messages = document.getElementById("messages");
+    const timer = document.getElementById("timer");
     const vsDisplay = document.getElementById("vs-display");
     const currentTurnDisplay = document.getElementById("current-turn");
 
@@ -205,9 +119,7 @@ button#home-button, button#play-again-button {
 
     const playersRef = ref(db, "tic-tac-toe/players");
     const gameRef = ref(db, "tic-tac-toe/game");
-    const rematchRef = ref(db, "tic-tac-toe/rematch");
 
-    // Start a game
     playButton.addEventListener("click", async () => {
       playerName = playerNameInput.value.trim();
       if (!playerName) {
@@ -217,6 +129,7 @@ button#home-button, button#play-again-button {
 
       joinGameDiv.style.display = "none";
       waitingScreen.style.display = "block";
+      cancelButton.style.display = "inline";
 
       const playerData = {
         name: playerName,
@@ -227,8 +140,10 @@ button#home-button, button#play-again-button {
 
       timeoutId = setTimeout(() => {
         remove(ref(db, `tic-tac-toe/players/${playerName}`));
-        alert("No match found. Try again.");
-        resetToJoinScreen();
+        alert("No match found. You have been removed from the list.");
+        waitingScreen.style.display = "none";
+        joinGameDiv.style.display = "block";
+        cancelButton.style.display = "none";
       }, 30000);
 
       onValue(playersRef, async (snapshot) => {
@@ -255,38 +170,39 @@ button#home-button, button#play-again-button {
       });
     });
 
-    // Cancel waiting
-    cancelButton.addEventListener("click", resetToJoinScreen);
-
-    function resetToJoinScreen() {
+    cancelButton.addEventListener("click", () => {
       remove(ref(db, `tic-tac-toe/players/${playerName}`));
       clearTimeout(timeoutId);
-      joinGameDiv.style.display = "block";
       waitingScreen.style.display = "none";
-    }
+      joinGameDiv.style.display = "block";
+      cancelButton.style.display = "none";
+    });
 
-    // Listen for game updates
     onValue(gameRef, (snapshot) => {
       const data = snapshot.val();
       if (!data) return;
 
-      const board = data.board;
       currentPlayer = data.turn;
+      const board = data.board;
 
       gameBoard.querySelectorAll("td").forEach((cell, index) => {
         cell.textContent = board[index];
         cell.classList.toggle("taken", Boolean(board[index]));
       });
 
-      currentTurnDisplay.textContent = currentPlayer === playerSymbol ? "Your Turn" : `${opponentName}'s Turn`;
+      currentTurnDisplay.textContent = currentPlayer === playerSymbol
+        ? "Your Turn"
+        : `${opponentName}'s Turn`;
 
       const winner = checkWinner(board);
       if (winner) {
-        endGame(winner);
+        messages.textContent =
+          winner === "Draw"
+            ? "It's a draw!"
+            : `${winner === "X" ? playerName : opponentName} wins!`;
       }
     });
 
-    // Gameboard click
     gameBoard.addEventListener("click", (event) => {
       if (!event.target.matches("td") || event.target.classList.contains("taken") || currentPlayer !== playerSymbol) return;
 
@@ -296,114 +212,260 @@ button#home-button, button#play-again-button {
       set(ref(db, "tic-tac-toe/game/turn"), playerSymbol === "X" ? "O" : "X");
     });
 
-    // Check winner
     function checkWinner(board) {
-      const winningCombos = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6],
+      const winningCombinations = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8],
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8],
+        [0, 4, 8],
+        [2, 4, 6],
       ];
-      for (const [a, b, c] of winningCombos) {
+
+      for (const [a, b, c] of winningCombinations) {
         if (board[a] && board[a] === board[b] && board[a] === board[c]) {
           return board[a];
         }
       }
       return board.includes("") ? null : "Draw";
     }
+  </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic Tac Toe Multiplayer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f4f4f4;
+    }
+    #game-container, #waiting-screen {
+      display: none;
+    }
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+    }
+    td {
+      width: 50px;
+      height: 50px;
+      border: 1px solid #000;
+      font-size: 24px;
+      text-align: center;
+      vertical-align: middle;
+      cursor: pointer;
+    }
+    td.taken {
+      cursor: not-allowed;
+    }
+    #messages {
+      margin-top: 20px;
+      color: green;
+    }
+    #vs-display {
+      margin-bottom: 10px;
+      font-weight: bold;
+      font-size: 20px;
+    }
+    #current-turn {
+      margin-bottom: 10px;
+      font-size: 18px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tic Tac Toe Multiplayer</h1>
+  <div id="join-game">
+    <input type="text" id="player-name" placeholder="Enter your name" />
+    <button id="play-button">Play</button>
+    <button id="cancel-button" style="display: none;">Cancel</button>
+  </div>
 
-    
+  <div id="waiting-screen">
+    <h2>Waiting for another player...</h2>
+    <p id="timer">Removing in 30 seconds...</p>
+  </div>
 
+  <div id="game-container">
+    <div id="vs-display"></div>
+    <div id="current-turn"></div>
+    <table id="game-board">
+      <tr>
+        <td data-cell="0"></td>
+        <td data-cell="1"></td>
+        <td data-cell="2"></td>
+      </tr>
+      <tr>
+        <td data-cell="3"></td>
+        <td data-cell="4"></td>
+        <td data-cell="5"></td>
+      </tr>
+      <tr>
+        <td data-cell="6"></td>
+        <td data-cell="7"></td>
+        <td data-cell="8"></td>
+      </tr>
+    </table>
+    <div id="messages"></div>
+  </div>
 
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+    import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js";
 
-// Hide game board after game ends
-function endGame(winner) {
-  messages.textContent =
-    winner === "Draw"
-      ? "It's a draw!"
-      : winner === playerSymbol
-      ? "You win!"
-      : `${opponentName} wins!`;
+    const firebaseConfig = {
+      apiKey: "AIzaSyAgyQsexCYpV0BGfylksrBrdLUTyyCRBHs",
+      authDomain: "tic-toc-5d009.firebaseapp.com",
+      databaseURL: "https://tic-toc-5d009-default-rtdb.firebaseio.com",
+      projectId: "tic-toc-5d009",
+      storageBucket: "tic-toc-5d009.firebasestorage.app",
+      messagingSenderId: "430888007998",
+      appId: "1:430888007998:web:8b441ece3ac77af3c7d46f",
+      measurementId: "G-Z4TQWZBGZG",
+    };
 
-  // Show Play Again and Home buttons
-  playAgainButton.style.display = "inline";
-  homeButton.style.display = "inline";
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-  // Hide the game board
-  gameBoard.style.display = "none";
-}
+    const joinGameDiv = document.getElementById("join-game");
+    const waitingScreen = document.getElementById("waiting-screen");
+    const gameContainer = document.getElementById("game-container");
+    const playButton = document.getElementById("play-button");
+    const cancelButton = document.getElementById("cancel-button");
+    const playerNameInput = document.getElementById("player-name");
+    const gameBoard = document.getElementById("game-board");
+    const messages = document.getElementById("messages");
+    const timer = document.getElementById("timer");
+    const vsDisplay = document.getElementById("vs-display");
+    const currentTurnDisplay = document.getElementById("current-turn");
 
-// Handle Play Again (Rematch Feature)
-playAgainButton.addEventListener("click", async () => {
-  await set(rematchRef, { requester: playerName, status: "waiting" });
-  messages.textContent = "Waiting for opponent to accept rematch...";
-  playAgainButton.style.display = "none";
-  homeButton.style.display = "none"; // Hide home button temporarily
-});
+    let playerName = "";
+    let opponentName = "";
+    let playerSymbol = "";
+    let currentPlayer = "";
+    let timeoutId;
 
-// Listen for Rematch Requests
-onValue(rematchRef, async (snapshot) => {
-  const rematchData = snapshot.val();
-  if (!rematchData) return;
+    const playersRef = ref(db, "tic-tac-toe/players");
+    const gameRef = ref(db, "tic-tac-toe/game");
 
-  // If you're the opponent receiving a rematch request
-  if (rematchData.requester !== playerName && rematchData.status === "waiting") {
-    const acceptRematch = confirm(`${rematchData.requester} wants a rematch. Accept?`);
-    if (acceptRematch) {
-      // Reset the game
-      await set(gameRef, {
-        board: Array(9).fill(""),
-        turn: "X",
-        players: [playerName, opponentName],
+    playButton.addEventListener("click", async () => {
+      playerName = playerNameInput.value.trim();
+      if (!playerName) {
+        alert("Please enter your name");
+        return;
+      }
+
+      joinGameDiv.style.display = "none";
+      waitingScreen.style.display = "block";
+      cancelButton.style.display = "inline";
+
+      const playerData = {
+        name: playerName,
+        symbol: "X",
+      };
+
+      await set(ref(db, `tic-tac-toe/players/${playerName}`), playerData);
+
+      timeoutId = setTimeout(() => {
+        remove(ref(db, `tic-tac-toe/players/${playerName}`));
+        alert("No match found. You have been removed from the list.");
+        waitingScreen.style.display = "none";
+        joinGameDiv.style.display = "block";
+        cancelButton.style.display = "none";
+      }, 30000);
+
+      onValue(playersRef, async (snapshot) => {
+        const players = snapshot.val();
+        if (!players || Object.keys(players).length < 2) return;
+
+        const [player1, player2] = Object.keys(players);
+        if (player1 === playerName || player2 === playerName) {
+          clearTimeout(timeoutId);
+          opponentName = player1 === playerName ? players[player2].name : players[player1].name;
+          playerSymbol = player1 === playerName ? "X" : "O";
+
+          await set(gameRef, {
+            board: Array(9).fill(""),
+            turn: "X",
+            players: [player1, player2],
+          });
+
+          waitingScreen.style.display = "none";
+          gameContainer.style.display = "block";
+          vsDisplay.textContent = `${playerName} VS ${opponentName}`;
+          remove(playersRef);
+        }
       });
-      await set(rematchRef, { requester: rematchData.requester, status: "accepted" });
-      messages.textContent = "Rematch started!";
-      gameBoard.style.display = "table"; // Show game board
-      playAgainButton.style.display = "none";
-      homeButton.style.display = "none"; // Hide home button for rematch
-    } else {
-      await set(rematchRef, { requester: rematchData.requester, status: "rejected" });
+    });
+
+    cancelButton.addEventListener("click", () => {
+      remove(ref(db, `tic-tac-toe/players/${playerName}`));
+      clearTimeout(timeoutId);
+      waitingScreen.style.display = "none";
+      joinGameDiv.style.display = "block";
+      cancelButton.style.display = "none";
+    });
+
+    onValue(gameRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      currentPlayer = data.turn;
+      const board = data.board;
+
+      gameBoard.querySelectorAll("td").forEach((cell, index) => {
+        cell.textContent = board[index];
+        cell.classList.toggle("taken", Boolean(board[index]));
+      });
+
+      currentTurnDisplay.textContent = currentPlayer === playerSymbol
+        ? "Your Turn"
+        : `${opponentName}'s Turn`;
+
+      const winner = checkWinner(board);
+      if (winner) {
+        messages.textContent =
+          winner === "Draw"
+            ? "It's a draw!"
+            : `${winner === "X" ? playerName : opponentName} wins!`;
+      }
+    });
+
+    gameBoard.addEventListener("click", (event) => {
+      if (!event.target.matches("td") || event.target.classList.contains("taken") || currentPlayer !== playerSymbol) return;
+
+      const cellIndex = event.target.dataset.cell;
+      const boardRef = ref(db, `tic-tac-toe/game/board/${cellIndex}`);
+      set(boardRef, playerSymbol);
+      set(ref(db, "tic-tac-toe/game/turn"), playerSymbol === "X" ? "O" : "X");
+    });
+
+    function checkWinner(board) {
+      const winningCombinations = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8],
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8],
+        [0, 4, 8],
+        [2, 4, 6],
+      ];
+
+      for (const [a, b, c] of winningCombinations) {
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          return board[a];
+        }
+      }
+      return board.includes("") ? null : "Draw";
     }
-  }
-
-  // If you're the one who requested a rematch
-  if (rematchData.requester === playerName) {
-    if (rematchData.status === "accepted") {
-      messages.textContent = "Opponent accepted rematch! Starting game...";
-      gameBoard.style.display = "table"; // Show game board
-      playAgainButton.style.display = "none";
-      homeButton.style.display = "none";
-    } else if (rematchData.status === "rejected") {
-      messages.textContent = "Opponent rejected your rematch request.";
-      homeButton.style.display = "inline"; // Show home button after rejection
-      await remove(rematchRef); // Clear rematch data
-    }
-  }
-});
-
-
-
-// Home Button: Navigate to Main Page
-homeButton.addEventListener("click", () => {
-  // Redirect to the main page
-  joinGameDiv.style.display = "block";
-  waitingScreen.style.display = "none";
-  gameContainer.style.display = "none";
-  playAgainButton.style.display = "none";
-  homeButton.style.display = "none";
-  messages.textContent = ""; // Clear messages
-});
-function nav(move) {
-  const currentIndex = document.activeElement;
-  const items = document.querySelectorAll(".navItem");
-  let currentElemIdx = [...items].indexOf(currentIndex);
-  const next = currentElemIdx + move;
-  let targetElement = items[next];
-  if (targetElement) targetElement.focus();
-}
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowDown") nav(1);
-  if (e.key === "ArrowUp") nav(-1);
-});
-
   </script>
 </body>
 </html>
