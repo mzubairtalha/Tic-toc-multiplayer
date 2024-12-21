@@ -7,23 +7,11 @@
   <style>
     body {
       font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
       text-align: center;
-      background-color: #f0f0f0;
-      margin: 0;
-      padding: 10px;
     }
-    h1 {
-      font-size: 20px;
-      margin-bottom: 10px;
-    }
-    #join-game, #waiting-screen, #game-container {
-      margin-top: 10px;
-    }
-    input, button {
-      font-size: 16px;
-      padding: 5px;
-      margin: 5px;
-      width: 90%;
+    #game-container, #waiting-screen {
+      display: none;
     }
     table {
       margin: 10px auto;
@@ -33,7 +21,7 @@
       width: 50px;
       height: 50px;
       border: 1px solid #000;
-      font-size: 20px;
+      font-size: 18px;
       text-align: center;
       vertical-align: middle;
       cursor: pointer;
@@ -42,29 +30,41 @@
       cursor: not-allowed;
     }
     #messages {
-      font-size: 16px;
+      margin-top: 10px;
       color: green;
+      font-size: 14px;
     }
     #vs-display, #current-turn {
-      font-size: 16px;
       margin: 5px 0;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    #player-name {
+      width: 80%;
+      margin-bottom: 5px;
+    }
+    button {
+      margin: 5px;
+      padding: 5px 10px;
+      font-size: 14px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
   <h1>Tic Tac Toe Multiplayer</h1>
-
   <div id="join-game">
     <input type="text" id="player-name" placeholder="Enter your name" />
     <button id="play-button">Play</button>
+    <button id="cancel-button" style="display: none;">Cancel</button>
   </div>
 
-  <div id="waiting-screen" style="display: none;">
+  <div id="waiting-screen">
     <h2>Waiting for another player...</h2>
-    <p id="timer">Timeout in 30 seconds...</p>
+    <p id="timer">Removing in 30 seconds...</p>
   </div>
 
-  <div id="game-container" style="display: none;">
+  <div id="game-container">
     <div id="vs-display"></div>
     <div id="current-turn"></div>
     <table id="game-board">
@@ -87,29 +87,28 @@
     <div id="messages"></div>
   </div>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <script>
-    // Firebase Initialization
     const firebaseConfig = {
       apiKey: "AIzaSyCE5gLp99K4IUq6V-BhlmgOcTtTjjG6WpU",
       authDomain: "chat-app-9d3d2.firebaseapp.com",
       databaseURL: "https://chat-app-9d3d2-default-rtdb.firebaseio.com",
-      projectId: "chat-app-9d2d2",
-      storageBucket: "chat-app-9d2d2.appspot.com",
+      projectId: "chat-app-9d3d2",
+      storageBucket: "chat-app-9d3d2.appspot.com",
       messagingSenderId: "110218700281",
       appId: "1:110218700281:web:470b92a7e4b223a0660928",
       measurementId: "G-PZKV7JTD5K",
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    // DOM Elements
     const joinGameDiv = document.getElementById("join-game");
     const waitingScreen = document.getElementById("waiting-screen");
     const gameContainer = document.getElementById("game-container");
     const playButton = document.getElementById("play-button");
+    const cancelButton = document.getElementById("cancel-button");
     const playerNameInput = document.getElementById("player-name");
     const gameBoard = document.getElementById("game-board");
     const messages = document.getElementById("messages");
@@ -120,89 +119,99 @@
     let opponentName = "";
     let playerSymbol = "";
     let currentPlayer = "";
+    let timeoutId;
 
-    // Firebase References
-    const playersRef = ref(db, "tic-tac-toe/players");
-    const gameRef = ref(db, "tic-tac-toe/game");
+    const playersRef = db.ref("tic-tac-toe/players");
+    const gameRef = db.ref("tic-tac-toe/game");
 
-    playButton.addEventListener("click", async () => {
+    playButton.addEventListener("click", () => {
       playerName = playerNameInput.value.trim();
       if (!playerName) {
-        alert("Please enter your name");
+        alert("Enter your name!");
         return;
       }
 
       joinGameDiv.style.display = "none";
       waitingScreen.style.display = "block";
+      cancelButton.style.display = "inline";
 
       const playerData = { name: playerName, symbol: "X" };
-      await set(ref(db, `tic-tac-toe/players/${playerName}`), playerData);
+      db.ref(`tic-tac-toe/players/${playerName}`).set(playerData);
 
-      // Check for opponent
-      onValue(playersRef, async (snapshot) => {
+      timeoutId = setTimeout(() => {
+        db.ref(`tic-tac-toe/players/${playerName}`).remove();
+        alert("No match found. Removed from the queue.");
+        resetScreen();
+      }, 30000);
+
+      playersRef.on("value", (snapshot) => {
         const players = snapshot.val();
-        if (players && Object.keys(players).length === 2) {
-          const [player1, player2] = Object.keys(players);
-          if (player1 === playerName || player2 === playerName) {
-            opponentName = player1 === playerName ? players[player2].name : players[player1].name;
-            playerSymbol = player1 === playerName ? "X" : "O";
+        if (!players || Object.keys(players).length < 2) return;
 
-            // Initialize Game
-            await set(gameRef, { board: Array(9).fill(""), turn: "X" });
+        const [player1, player2] = Object.keys(players);
+        if (player1 === playerName || player2 === playerName) {
+          clearTimeout(timeoutId);
+          opponentName = player1 === playerName ? players[player2].name : players[player1].name;
+          playerSymbol = player1 === playerName ? "X" : "O";
 
-            waitingScreen.style.display = "none";
-            gameContainer.style.display = "block";
-            vsDisplay.textContent = `${playerName} VS ${opponentName}`;
-          }
+          db.ref("tic-tac-toe/game").set({
+            board: Array(9).fill(""),
+            turn: "X",
+            players: [player1, player2],
+          });
+
+          waitingScreen.style.display = "none";
+          gameContainer.style.display = "block";
+          vsDisplay.textContent = `${playerName} VS ${opponentName}`;
+          playersRef.remove();
         }
       });
     });
 
-    // Game Board Click
-    gameBoard.addEventListener("click", async (event) => {
-      if (!event.target.matches("td") || event.target.classList.contains("taken") || currentPlayer !== playerSymbol) return;
+    cancelButton.addEventListener("click", resetScreen);
 
-      const cellIndex = event.target.dataset.cell;
-      await set(ref(db, `tic-tac-toe/game/board/${cellIndex}`), playerSymbol);
-      await set(ref(db, "tic-tac-toe/game/turn"), playerSymbol === "X" ? "O" : "X");
+    gameBoard.addEventListener("click", (e) => {
+      if (!e.target.matches("td") || e.target.classList.contains("taken") || currentPlayer !== playerSymbol) return;
+
+      const cellIndex = e.target.dataset.cell;
+      db.ref(`tic-tac-toe/game/board/${cellIndex}`).set(playerSymbol);
+      db.ref("tic-tac-toe/game/turn").set(playerSymbol === "X" ? "O" : "X");
     });
 
-    // Listen for Game Updates
-    onValue(gameRef, (snapshot) => {
-      const gameData = snapshot.val();
-      if (!gameData) return;
+    gameRef.on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
 
-      const board = gameData.board;
-      currentPlayer = gameData.turn;
+      currentPlayer = data.turn;
+      const board = data.board;
 
       gameBoard.querySelectorAll("td").forEach((cell, index) => {
         cell.textContent = board[index];
         cell.classList.toggle("taken", Boolean(board[index]));
       });
 
-      currentTurnDisplay.textContent = currentPlayer === playerSymbol ? "Your Turn" : `${opponentName}'s Turn`;
+      currentTurnDisplay.textContent = currentPlayer === playerSymbol
+        ? "Your Turn"
+        : `${opponentName}'s Turn`;
 
-      // Check Winner
       const winner = checkWinner(board);
       if (winner) {
-        messages.textContent = winner === "Draw" ? "It's a draw!" : `${winner === playerSymbol ? playerName : opponentName} wins!`;
+        messages.textContent = winner === "Draw" ? "It's a draw!" : `${winner === "X" ? playerName : opponentName} wins!`;
       }
     });
 
-    // Winner Check Function
     function checkWinner(board) {
-      const combinations = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8],
-        [0, 3, 6], [1, 4, 7], [2, 5, 8],
-        [0, 4, 8], [2, 4, 6],
-      ];
-
-      for (const [a, b, c] of combinations) {
-        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-          return board[a];
-        }
+      const combos = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+      for (const [a, b, c] of combos) {
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
       }
       return board.includes("") ? null : "Draw";
+    }
+
+    function resetScreen() {
+      waitingScreen.style.display = "none";
+      joinGameDiv.style.display = "block";
+      cancelButton.style.display = "none";
     }
   </script>
 </body>
