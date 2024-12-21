@@ -171,7 +171,16 @@ button#home-button, button#play-again-button {
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
     import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js";
 
-    config here.       
+    const firebaseConfig = {
+      apiKey: "AIzaSyAgyQsexCYpV0BGfylksrBrdLUTyyCRBHs",
+      authDomain: "tic-toc-5d009.firebaseapp.com",
+      databaseURL: "https://tic-toc-5d009-default-rtdb.firebaseio.com",
+      projectId: "tic-toc-5d009",
+      storageBucket: "tic-toc-5d009.firebasestorage.app",
+      messagingSenderId: "430888007998",
+      appId: "1:430888007998:web:8b441ece3ac77af3c7d46f",
+      measurementId: "G-Z4TQWZBGZG",
+    };       
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
