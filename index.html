@@ -3,199 +3,222 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multiplayer Tic Tac Toe</title>
-
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
+  <title>Tic Tac Toe Multiplayer</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      margin: 50px;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
     }
-    .message {
-      margin-top: 20px;
-      font-size: 18px;
+    #game-container, #waiting-screen {
+      display: none;
     }
-    input {
-      margin: 10px;
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
     }
-    #gameBoard {
-      display: grid;
-      grid-template-columns: repeat(3, 100px);
-      grid-gap: 5px;
-      justify-content: center;
-      margin: 20px;
-    }
-    .cell {
-      width: 100px;
-      height: 100px;
+    td {
+      width: 60px;
+      height: 60px;
       border: 1px solid #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 30px;
+      font-size: 28px;
+      text-align: center;
+      vertical-align: middle;
       cursor: pointer;
     }
-    .cell.taken {
-      pointer-events: none;
-      background-color: lightgrey;
+    td.taken {
+      cursor: not-allowed;
+    }
+    #messages {
+      margin-top: 20px;
+      color: green;
+    }
+    #vs-display {
+      margin-bottom: 10px;
+      font-weight: bold;
+      font-size: 20px;
+    }
+    #current-turn {
+      margin-bottom: 10px;
+      font-size: 18px;
+      color: #333;
+    }
+    .hidden {
+      display: none;
     }
   </style>
 </head>
 <body>
-
-  <h1>Tic Tac Toe - Multiplayer</h1>
-
-  <!-- Name Entry Form -->
-  <div id="nameEntry">
-    <input type="text" id="playerName" placeholder="Enter your name" />
-    <button id="saveNameBtn">Save Name</button>
+  <h1>Tic Tac Toe Multiplayer</h1>
+  <div id="join-game">
+    <input type="text" id="player-name" placeholder="Enter your name" />
+    <button id="play-button">Play</button>
+    <button id="cancel-button" class="hidden">Cancel</button>
   </div>
 
-  <!-- Play Button (hidden initially) -->
-  <div id="playSection" style="display:none;">
-    <button id="playBtn">Play</button>
+  <div id="waiting-screen">
+    <h2>Waiting for another player...</h2>
+    <p id="timer">Removing in 30 seconds...</p>
   </div>
 
-  <!-- Game Board (hidden initially) -->
-  <div id="gameBoard" style="display:none;">
-    <div class="cell" data-cell="0"></div>
-    <div class="cell" data-cell="1"></div>
-    <div class="cell" data-cell="2"></div>
-    <div class="cell" data-cell="3"></div>
-    <div class="cell" data-cell="4"></div>
-    <div class="cell" data-cell="5"></div>
-    <div class="cell" data-cell="6"></div>
-    <div class="cell" data-cell="7"></div>
-    <div class="cell" data-cell="8"></div>
+  <div id="game-container">
+    <div id="vs-display"></div>
+    <div id="current-turn"></div>
+    <table id="game-board">
+      <tr>
+        <td data-cell="0"></td>
+        <td data-cell="1"></td>
+        <td data-cell="2"></td>
+      </tr>
+      <tr>
+        <td data-cell="3"></td>
+        <td data-cell="4"></td>
+        <td data-cell="5"></td>
+      </tr>
+      <tr>
+        <td data-cell="6"></td>
+        <td data-cell="7"></td>
+        <td data-cell="8"></td>
+      </tr>
+    </table>
+    <div id="messages"></div>
   </div>
 
-  <div class="message" id="message"></div>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+    import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js";
 
-  <script>
-    // Firebase Initialization
     const firebaseConfig = {
-      apiKey: "AIzaSyCE5gLp99K4IUq6V-BhlmgOcTtTjjG6WpU",
-      authDomain: "chat-app-9d3d2.firebaseapp.com",
-      databaseURL: "https://chat-app-9d3d2-default-rtdb.firebaseio.com",
-      projectId: "chat-app-9d2d2",
-      storageBucket: "chat-app-9d2d2.appspot.com",
-      messagingSenderId: "110218700281",
-      appId: "1:110218700281:web:470b92a7e4b223a0660928",
-      measurementId: "G-PZKV7JTD5K",
+      apiKey: "AIzaSyAgyQsexCYpV0BGfylksrBrdLUTyyCRBHs",
+      authDomain: "tic-tac-5d009.firebaseapp.com",
+      databaseURL: "https://tic-tac-5d009-default-rtdb.firebaseio.com",
+      projectId: "tic-tac-5d009",
+      storageBucket: "tic-tac-5d009.firebasestorage.app",
+      messagingSenderId: "430888007998",
+      appId: "1:430888007998:web:8b441ece3ac77af3c7d46f",
+      measurementId: "G-Z4TQWZBGZG",
     };
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
 
-    let playerName;
-    let playerSymbol;
-    let opponentSymbol;
-    let gameRef;
-    let gameState = Array(9).fill(null);
-    let currentPlayer = "X";  // 'X' starts by default
-    let matchFound = false;
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    // Save name to localStorage and display the Play button
-    document.getElementById('saveNameBtn').addEventListener('click', () => {
-      playerName = document.getElementById('playerName').value.trim();
-      if (playerName) {
-        localStorage.setItem('playerName', playerName);
-        document.getElementById('nameEntry').style.display = 'none';
-        document.getElementById('playSection').style.display = 'block';
-        document.getElementById('message').innerText = 'Name saved! Click Play to start.';
-      } else {
-        alert('Please enter a name.');
-      }
-    });
+    const joinGameDiv = document.getElementById("join-game");
+    const waitingScreen = document.getElementById("waiting-screen");
+    const gameContainer = document.getElementById("game-container");
+    const playButton = document.getElementById("play-button");
+    const cancelButton = document.getElementById("cancel-button");
+    const playerNameInput = document.getElementById("player-name");
+    const gameBoard = document.getElementById("game-board");
+    const messages = document.getElementById("messages");
+    const timer = document.getElementById("timer");
+    const vsDisplay = document.getElementById("vs-display");
+    const currentTurnDisplay = document.getElementById("current-turn");
 
-    // Handle Play Button Click
-    document.getElementById('playBtn').addEventListener('click', () => {
+    let playerName = "";
+    let opponentName = "";
+    let playerSymbol = "";
+    let currentPlayer = "";
+    let timeoutId;
+
+    const playersRef = ref(db, "tic-tac-toe/players");
+    const gameRef = ref(db, "tic-tac-toe/game");
+
+    playButton.addEventListener("click", async () => {
+      playerName = playerNameInput.value.trim();
       if (!playerName) {
-        alert('Please enter your name first.');
+        alert("Please enter your name");
         return;
       }
 
-      // Add player to Firebase matching list
-      const matchingRef = database.ref('matchingList');
-      matchingRef.once('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data && Object.keys(data).length > 0) {
-          // There is already a player, start the game
-          const opponent = Object.keys(data)[0];
-          gameRef = database.ref('games/' + playerName + "-" + opponent);
-          gameRef.set({
-            gameState,
-            currentPlayer,
-            players: {
-              [playerName]: "X", 
-              [opponent]: "O"
-            }
+      joinGameDiv.style.display = "none";
+      waitingScreen.style.display = "block";
+      cancelButton.classList.remove("hidden");
+
+      const playerData = {
+        name: playerName,
+        symbol: "X",
+      };
+
+      await set(ref(db, `tic-tac-toe/players/${playerName}`), playerData);
+
+      timeoutId = setTimeout(() => {
+        remove(ref(db, `tic-tac-toe/players/${playerName}`));
+        alert("No match found. You have been removed from the list.");
+        waitingScreen.style.display = "none";
+        joinGameDiv.style.display = "block";
+        cancelButton.classList.add("hidden");
+      }, 30000);
+
+      onValue(playersRef, async (snapshot) => {
+        const players = snapshot.val();
+        if (!players || Object.keys(players).length < 2) return;
+
+        const [player1, player2] = Object.keys(players);
+        if (player1 === playerName || player2 === playerName) {
+          clearTimeout(timeoutId);
+          opponentName = player1 === playerName ? players[player2].name : players[player1].name;
+          playerSymbol = player1 === playerName ? "X" : "O";
+
+          await set(gameRef, {
+            board: Array(9).fill(""),
+            turn: "X",
+            players: [player1, player2],
           });
-          matchingRef.child(opponent).remove(); // Remove opponent from matching list
-          matchingRef.child(playerName).remove(); // Remove player from matching list
-          startGame(playerName, opponent);
-        } else {
-          // No player found, wait for someone else
-          matchingRef.child(playerName).set(true);
-          document.getElementById('message').innerText = `Waiting for opponent...`;
+
+          waitingScreen.style.display = "none";
+          gameContainer.style.display = "block";
+          vsDisplay.textContent = `${playerName} VS ${opponentName}`;
+          remove(playersRef);
         }
       });
     });
 
-    // Function to start the game between two players
-    function startGame(player, opponent) {
-      document.getElementById('message').innerText = `Match found! ${player} vs ${opponent}`;
-      document.getElementById('playSection').style.display = 'none';
-      document.getElementById('gameBoard').style.display = 'block';
-      playerSymbol = "X";
-      opponentSymbol = "O";
-      listenToGame();
-    }
+    cancelButton.addEventListener("click", () => {
+      remove(ref(db, `tic-tac-toe/players/${playerName}`));
+      clearTimeout(timeoutId);
+      waitingScreen.style.display = "none";
+      joinGameDiv.style.display = "block";
+      cancelButton.classList.add("hidden");
+    });
 
-    // Function to listen to the game state
-    function listenToGame() {
-      gameRef.on('value', (snapshot) => {
-        const gameData = snapshot.val();
-        if (gameData) {
-          gameState = gameData.gameState;
-          currentPlayer = gameData.currentPlayer;
-          updateBoard();
-        }
+    onValue(gameRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      currentPlayer = data.turn;
+      const board = data.board;
+
+      gameBoard.querySelectorAll("td").forEach((cell, index) => {
+        cell.textContent = board[index];
+        cell.classList.toggle("taken", Boolean(board[index]));
       });
-    }
 
-    // Function to update the game board
-    function updateBoard() {
-      for (let i = 0; i < 9; i++) {
-        const cell = document.querySelector(`.cell[data-cell='${i}']`);
-        cell.innerText = gameState[i];
-        if (gameState[i] !== null) {
-          cell.classList.add('taken');
-        } else {
-          cell.classList.remove('taken');
-        }
-      }
-      checkForWinner();
-    }
+      currentTurnDisplay.textContent = currentPlayer === playerSymbol
+        ? "Your Turn"
+        : `${opponentName}'s Turn`;
 
-    // Handle cell click
-    document.getElementById('gameBoard').addEventListener('click', (event) => {
-      const cell = event.target;
-      const cellIndex = cell.getAttribute('data-cell');
-
-      if (cellIndex && gameState[cellIndex] === null && currentPlayer === playerSymbol) {
-        gameState[cellIndex] = currentPlayer;
-        currentPlayer = currentPlayer === "X" ? "O" : "X";
-        gameRef.set({ gameState, currentPlayer });
+      const winner = checkWinner(board);
+      if (winner) {
+        messages.textContent =
+          winner === "Draw"
+            ? "It's a draw!"
+            : `${winner === "X" ? playerName : opponentName} wins!`;
       }
     });
 
-    // Check for a winner
-    function checkForWinner() {
-      const winPatterns = [
+    gameBoard.addEventListener("click", (event) => {
+      if (!event.target.matches("td") || event.target.classList.contains("taken") || currentPlayer !== playerSymbol) return;
+
+      const cellIndex = event.target.dataset.cell;
+      const boardRef = ref(db, `tic-tac-toe/game/board/${cellIndex}`);
+      set(boardRef, playerSymbol);
+      set(ref(db, "tic-tac-toe/game/turn"), playerSymbol === "X" ? "O" : "X");
+    });
+
+    function checkWinner(board) {
+      const winningCombinations = [
         [0, 1, 2],
         [3, 4, 5],
         [6, 7, 8],
@@ -203,50 +226,16 @@
         [1, 4, 7],
         [2, 5, 8],
         [0, 4, 8],
-        [2, 4, 6]
+        [2, 4, 6],
       ];
 
-      for (let pattern of winPatterns) {
-        const [a, b, c] = pattern;
-        if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
-          setTimeout(() => {
-            alert(`${gameState[a]} wins!`);
-            resetGame();
-          }, 100);
-          return;
+      for (const [a, b, c] of winningCombinations) {
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+          return board[a];
         }
       }
-
-      // Check for a draw
-      if (!gameState.includes(null)) {
-        setTimeout(() => {
-          alert("It's a draw!");
-          resetGame();
-        }, 100);
-      }
+      return board.includes("") ? null : "Draw";
     }
-
-    // Function to reset the game
-    function resetGame() {
-      gameState = Array(9).fill(null);
-      gameRef.set({ gameState, currentPlayer });
-      updateBoard();
-      document.getElementById('message').innerText = "Game Over. Click Play to start a new game.";
-      document.getElementById('gameBoard').style.display = 'none';
-      document.getElementById('playSection').style.display = 'block';
-    }
-
-    // Wait for the page to load and check for local storage name
-    window.onload = function() {
-      const savedName = localStorage.getItem('playerName');
-      if (savedName) {
-        playerName = savedName;
-        document.getElementById('nameEntry').style.display = 'none';
-        document.getElementById('playSection').style.display = 'block';
-        document.getElementById('message').innerText = `Welcome back, ${playerName}! Click Play to start.`;
-      }
-    };
   </script>
-
 </body>
 </html>
