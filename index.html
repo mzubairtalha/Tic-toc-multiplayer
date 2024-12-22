@@ -82,7 +82,7 @@
       authDomain: "chat-app-9d3d2.firebaseapp.com",
       databaseURL: "https://chat-app-9d3d2-default-rtdb.firebaseio.com",
       projectId: "chat-app-9d2d2",
-      storageBucket: "chat-app-9d3d2.appspot.com",
+      storageBucket: "chat-app-9d2d2.appspot.com",
       messagingSenderId: "110218700281",
       appId: "1:110218700281:web:470b92a7e4b223a0660928",
       measurementId: "G-PZKV7JTD5K",
@@ -96,6 +96,7 @@
     let gameRef;
     let gameState = Array(9).fill(null);
     let currentPlayer = "X";  // 'X' starts by default
+    let matchFound = false;
 
     // Save name to localStorage and display the Play button
     document.getElementById('saveNameBtn').addEventListener('click', () => {
@@ -125,8 +126,16 @@
           // There is already a player, start the game
           const opponent = Object.keys(data)[0];
           gameRef = database.ref('games/' + playerName + "-" + opponent);
-          gameRef.set({ gameState, currentPlayer });
+          gameRef.set({
+            gameState,
+            currentPlayer,
+            players: {
+              [playerName]: "X", 
+              [opponent]: "O"
+            }
+          });
           matchingRef.child(opponent).remove(); // Remove opponent from matching list
+          matchingRef.child(playerName).remove(); // Remove player from matching list
           startGame(playerName, opponent);
         } else {
           // No player found, wait for someone else
@@ -201,36 +210,40 @@
         const [a, b, c] = pattern;
         if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
           setTimeout(() => {
-            alert(`${gameState[a]} Wins!`);
+            alert(`${gameState[a]} wins!`);
             resetGame();
           }, 100);
           return;
         }
       }
 
-      if (gameState.every(cell => cell !== null)) {
+      // Check for a draw
+      if (!gameState.includes(null)) {
         setTimeout(() => {
-          alert("It's a Draw!");
+          alert("It's a draw!");
           resetGame();
         }, 100);
       }
     }
 
-    // Reset the game after a win or draw
+    // Function to reset the game
     function resetGame() {
       gameState = Array(9).fill(null);
-      currentPlayer = "X";
       gameRef.set({ gameState, currentPlayer });
+      updateBoard();
+      document.getElementById('message').innerText = "Game Over. Click Play to start a new game.";
+      document.getElementById('gameBoard').style.display = 'none';
+      document.getElementById('playSection').style.display = 'block';
     }
 
-    // Check if the player has already entered a name
-    window.onload = () => {
+    // Wait for the page to load and check for local storage name
+    window.onload = function() {
       const savedName = localStorage.getItem('playerName');
       if (savedName) {
         playerName = savedName;
         document.getElementById('nameEntry').style.display = 'none';
         document.getElementById('playSection').style.display = 'block';
-        document.getElementById('message').innerText = 'Name already saved! Click Play to start.';
+        document.getElementById('message').innerText = `Welcome back, ${playerName}! Click Play to start.`;
       }
     };
   </script>
