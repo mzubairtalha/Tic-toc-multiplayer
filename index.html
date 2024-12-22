@@ -4,13 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tic Tac Toe Multiplayer</title>
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
       background-color: #f4f4f4;
-      margin: 0;
-      padding: 0;
     }
     #game-container, #waiting-screen {
       display: none;
@@ -20,10 +23,10 @@
       border-collapse: collapse;
     }
     td {
-      width: 60px;
-      height: 60px;
+      width: 50px;
+      height: 50px;
       border: 1px solid #000;
-      font-size: 28px;
+      font-size: 24px;
       text-align: center;
       vertical-align: middle;
       cursor: pointer;
@@ -45,9 +48,6 @@
       font-size: 18px;
       color: #333;
     }
-    .hidden {
-      display: none;
-    }
   </style>
 </head>
 <body>
@@ -55,7 +55,7 @@
   <div id="join-game">
     <input type="text" id="player-name" placeholder="Enter your name" />
     <button id="play-button">Play</button>
-    <button id="cancel-button" class="hidden">Cancel</button>
+    <button id="cancel-button" style="display: none;">Cancel</button>
   </div>
 
   <div id="waiting-screen">
@@ -86,46 +86,44 @@
     <div id="messages"></div>
   </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
-    import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js";
-
-    const firebaseConfig = {
+  <script>
+    var firebaseConfig = {
       apiKey: "AIzaSyAgyQsexCYpV0BGfylksrBrdLUTyyCRBHs",
       authDomain: "tic-tac-5d009.firebaseapp.com",
       databaseURL: "https://tic-tac-5d009-default-rtdb.firebaseio.com",
       projectId: "tic-tac-5d009",
-      storageBucket: "tic-tac-5d009.firebasestorage.app",
+      storageBucket: "tic-tac-5d009.appspot.com",
       messagingSenderId: "430888007998",
       appId: "1:430888007998:web:8b441ece3ac77af3c7d46f",
       measurementId: "G-Z4TQWZBGZG",
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.database();
 
-    const joinGameDiv = document.getElementById("join-game");
-    const waitingScreen = document.getElementById("waiting-screen");
-    const gameContainer = document.getElementById("game-container");
-    const playButton = document.getElementById("play-button");
-    const cancelButton = document.getElementById("cancel-button");
-    const playerNameInput = document.getElementById("player-name");
-    const gameBoard = document.getElementById("game-board");
-    const messages = document.getElementById("messages");
-    const timer = document.getElementById("timer");
-    const vsDisplay = document.getElementById("vs-display");
-    const currentTurnDisplay = document.getElementById("current-turn");
+    var joinGameDiv = document.getElementById("join-game");
+    var waitingScreen = document.getElementById("waiting-screen");
+    var gameContainer = document.getElementById("game-container");
+    var playButton = document.getElementById("play-button");
+    var cancelButton = document.getElementById("cancel-button");
+    var playerNameInput = document.getElementById("player-name");
+    var gameBoard = document.getElementById("game-board");
+    var messages = document.getElementById("messages");
+    var timer = document.getElementById("timer");
+    var vsDisplay = document.getElementById("vs-display");
+    var currentTurnDisplay = document.getElementById("current-turn");
 
-    let playerName = "";
-    let opponentName = "";
-    let playerSymbol = "";
-    let currentPlayer = "";
-    let timeoutId;
+    var playerName = "";
+    var opponentName = "";
+    var playerSymbol = "";
+    var currentPlayer = "";
+    var timeoutId;
 
-    const playersRef = ref(db, "tic-tac-toe/players");
-    const gameRef = ref(db, "tic-tac-toe/game");
+    var playersRef = db.ref("tic-tac-toe/players");
+    var gameRef = db.ref("tic-tac-toe/game");
 
-    playButton.addEventListener("click", async () => {
+    playButton.addEventListener("click", function () {
       playerName = playerNameInput.value.trim();
       if (!playerName) {
         alert("Please enter your name");
@@ -134,91 +132,93 @@
 
       joinGameDiv.style.display = "none";
       waitingScreen.style.display = "block";
-      cancelButton.classList.remove("hidden");
+      cancelButton.style.display = "inline";
 
-      const playerData = {
+      var playerData = {
         name: playerName,
         symbol: "X",
       };
 
-      await set(ref(db, `tic-tac-toe/players/${playerName}`), playerData);
+      firebase.database().ref('tic-tac-toe/players/' + playerName).set(playerData);
 
-      timeoutId = setTimeout(() => {
-        remove(ref(db, `tic-tac-toe/players/${playerName}`));
+      timeoutId = setTimeout(function () {
+        firebase.database().ref('tic-tac-toe/players/' + playerName).remove();
         alert("No match found. You have been removed from the list.");
         waitingScreen.style.display = "none";
         joinGameDiv.style.display = "block";
-        cancelButton.classList.add("hidden");
+        cancelButton.style.display = "none";
       }, 30000);
 
-      onValue(playersRef, async (snapshot) => {
-        const players = snapshot.val();
+      playersRef.on("value", function (snapshot) {
+        var players = snapshot.val();
         if (!players || Object.keys(players).length < 2) return;
 
-        const [player1, player2] = Object.keys(players);
+        var player1 = Object.keys(players)[0];
+        var player2 = Object.keys(players)[1];
         if (player1 === playerName || player2 === playerName) {
           clearTimeout(timeoutId);
           opponentName = player1 === playerName ? players[player2].name : players[player1].name;
           playerSymbol = player1 === playerName ? "X" : "O";
 
-          await set(gameRef, {
-            board: Array(9).fill(""),
+          gameRef.set({
+            board: ["", "", "", "", "", "", "", "", ""],
             turn: "X",
             players: [player1, player2],
           });
 
           waitingScreen.style.display = "none";
           gameContainer.style.display = "block";
-          vsDisplay.textContent = `${playerName} VS ${opponentName}`;
-          remove(playersRef);
+          vsDisplay.textContent = playerName + " VS " + opponentName;
+          firebase.database().ref('tic-tac-toe/players').remove();
         }
       });
     });
 
-    cancelButton.addEventListener("click", () => {
-      remove(ref(db, `tic-tac-toe/players/${playerName}`));
+    cancelButton.addEventListener("click", function () {
+      firebase.database().ref('tic-tac-toe/players/' + playerName).remove();
       clearTimeout(timeoutId);
       waitingScreen.style.display = "none";
       joinGameDiv.style.display = "block";
-      cancelButton.classList.add("hidden");
+      cancelButton.style.display = "none";
     });
 
-    onValue(gameRef, (snapshot) => {
-      const data = snapshot.val();
+    gameRef.on("value", function (snapshot) {
+      var data = snapshot.val();
       if (!data) return;
 
       currentPlayer = data.turn;
-      const board = data.board;
+      var board = data.board;
 
-      gameBoard.querySelectorAll("td").forEach((cell, index) => {
-        cell.textContent = board[index];
-        cell.classList.toggle("taken", Boolean(board[index]));
-      });
+      var cells = gameBoard.getElementsByTagName("td");
+      for (var i = 0; i < cells.length; i++) {
+        cells[i].textContent = board[i];
+        cells[i].classList.toggle("taken", Boolean(board[i]));
+      }
 
       currentTurnDisplay.textContent = currentPlayer === playerSymbol
         ? "Your Turn"
-        : `${opponentName}'s Turn`;
+        : opponentName + "'s Turn";
 
-      const winner = checkWinner(board);
+      var winner = checkWinner(board);
       if (winner) {
         messages.textContent =
           winner === "Draw"
             ? "It's a draw!"
-            : `${winner === "X" ? playerName : opponentName} wins!`;
+            : (winner === "X" ? playerName : opponentName) + " wins!";
       }
     });
 
-    gameBoard.addEventListener("click", (event) => {
+    gameBoard.addEventListener("click", function (event) {
       if (!event.target.matches("td") || event.target.classList.contains("taken") || currentPlayer !== playerSymbol) return;
 
-      const cellIndex = event.target.dataset.cell;
-      const boardRef = ref(db, `tic-tac-toe/game/board/${cellIndex}`);
-      set(boardRef, playerSymbol);
-      set(ref(db, "tic-tac-toe/game/turn"), playerSymbol === "X" ? "O" : "X");
+      var cellIndex = event.target.getAttribute("data-cell");
+      var boardRef = db.ref("tic-tac-toe/game/board/" + cellIndex);
+      boardRef.set(playerSymbol);
+      db.ref("tic-tac-toe/game/turn").set(playerSymbol === "X" ? "O" : "X");
     });
 
     function checkWinner(board) {
-      const winningCombinations = [
+      var winningCombinations = [
         [0, 1, 2],
         [3, 4, 5],
         [6, 7, 8],
@@ -229,7 +229,8 @@
         [2, 4, 6],
       ];
 
-      for (const [a, b, c] of winningCombinations) {
+      for (var i = 0; i < winningCombinations.length; i++) {
+        var [a, b, c] = winningCombinations[i];
         if (board[a] && board[a] === board[b] && board[a] === board[c]) {
           return board[a];
         }
