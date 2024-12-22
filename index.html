@@ -1,121 +1,239 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tic Tac Toe</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-        }
-        .board {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-gap: 5px;
-            width: 200px;
-            height: 200px;
-            background-color: #fff;
-            border: 2px solid #000;
-        }
-        .cell {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            font-weight: bold;
-            background-color: #ddd;
-            border: 1px solid #000;
-            cursor: pointer;
-        }
-        .cell:focus {
-            outline: 2px solid #00f;
-            background-color: #bbb;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multiplayer Tic Tac Toe</title>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 50px;
+    }
+    .message {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+    input {
+      margin: 10px;
+    }
+    #gameBoard {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-gap: 5px;
+      justify-content: center;
+      margin: 20px;
+    }
+    .cell {
+      width: 100px;
+      height: 100px;
+      border: 1px solid #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      cursor: pointer;
+    }
+    .cell.taken {
+      pointer-events: none;
+      background-color: lightgrey;
+    }
+  </style>
 </head>
 <body>
-    <div class="board">
-        <div class="cell" tabindex="0"></div>
-        <div class="cell" tabindex="0"></div>
-        <div class="cell" tabindex="0"></div>
-        <div class="cell" tabindex="0"></div>
-        <div class="cell" tabindex="0"></div>
-        <div class="cell" tabindex="0"></div>
-        <div class="cell" tabindex="0"></div>
-        <div class="cell" tabindex="0"></div>
-        <div class="cell" tabindex="0"></div>
-    </div>
 
-    <script>
-        let currentPlayer = "X";
+  <h1>Tic Tac Toe - Multiplayer</h1>
 
-        document.querySelectorAll(".cell").forEach((cell) => {
-            cell.addEventListener("click", function () {
-                makeMove(cell);
-            });
+  <!-- Name Entry Form -->
+  <div id="nameEntry">
+    <input type="text" id="playerName" placeholder="Enter your name" />
+    <button id="saveNameBtn">Save Name</button>
+  </div>
 
-            cell.addEventListener("keydown", function (e) {
-                if (e.key === "Enter") {
-                    makeMove(cell);
-                }
-            });
-        });
+  <!-- Play Button (hidden initially) -->
+  <div id="playSection" style="display:none;">
+    <button id="playBtn">Play</button>
+  </div>
 
-        function makeMove(cell) {
-            if (cell.innerText === "") {
-                cell.innerText = currentPlayer;
-                if (checkWinner()) {
-                    alert(`${currentPlayer} wins!`);
-                    resetGame();
-                } else if (isDraw()) {
-                    alert("It's a draw!");
-                    resetGame();
-                } else {
-                    currentPlayer = currentPlayer === "X" ? "O" : "X";
-                }
-            } else {
-                alert("Cell already taken!");
-            }
+  <!-- Game Board (hidden initially) -->
+  <div id="gameBoard" style="display:none;">
+    <div class="cell" data-cell="0"></div>
+    <div class="cell" data-cell="1"></div>
+    <div class="cell" data-cell="2"></div>
+    <div class="cell" data-cell="3"></div>
+    <div class="cell" data-cell="4"></div>
+    <div class="cell" data-cell="5"></div>
+    <div class="cell" data-cell="6"></div>
+    <div class="cell" data-cell="7"></div>
+    <div class="cell" data-cell="8"></div>
+  </div>
+
+  <div class="message" id="message"></div>
+
+  <script>
+    // Firebase Initialization
+    const firebaseConfig = {
+      apiKey: "AIzaSyCE5gLp99K4IUq6V-BhlmgOcTtTjjG6WpU",
+      authDomain: "chat-app-9d3d2.firebaseapp.com",
+      databaseURL: "https://chat-app-9d3d2-default-rtdb.firebaseio.com",
+      projectId: "chat-app-9d2d2",
+      storageBucket: "chat-app-9d3d2.appspot.com",
+      messagingSenderId: "110218700281",
+      appId: "1:110218700281:web:470b92a7e4b223a0660928",
+      measurementId: "G-PZKV7JTD5K",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    let playerName;
+    let playerSymbol;
+    let opponentSymbol;
+    let gameRef;
+    let gameState = Array(9).fill(null);
+    let currentPlayer = "X";  // 'X' starts by default
+
+    // Save name to localStorage and display the Play button
+    document.getElementById('saveNameBtn').addEventListener('click', () => {
+      playerName = document.getElementById('playerName').value.trim();
+      if (playerName) {
+        localStorage.setItem('playerName', playerName);
+        document.getElementById('nameEntry').style.display = 'none';
+        document.getElementById('playSection').style.display = 'block';
+        document.getElementById('message').innerText = 'Name saved! Click Play to start.';
+      } else {
+        alert('Please enter a name.');
+      }
+    });
+
+    // Handle Play Button Click
+    document.getElementById('playBtn').addEventListener('click', () => {
+      if (!playerName) {
+        alert('Please enter your name first.');
+        return;
+      }
+
+      // Add player to Firebase matching list
+      const matchingRef = database.ref('matchingList');
+      matchingRef.once('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data && Object.keys(data).length > 0) {
+          // There is already a player, start the game
+          const opponent = Object.keys(data)[0];
+          gameRef = database.ref('games/' + playerName + "-" + opponent);
+          gameRef.set({ gameState, currentPlayer });
+          matchingRef.child(opponent).remove(); // Remove opponent from matching list
+          startGame(playerName, opponent);
+        } else {
+          // No player found, wait for someone else
+          matchingRef.child(playerName).set(true);
+          document.getElementById('message').innerText = `Waiting for opponent...`;
         }
+      });
+    });
 
-        function checkWinner() {
-            const cells = document.querySelectorAll(".cell");
-            const winPatterns = [
-                [0, 1, 2],
-                [3, 4, 5],
-                [6, 7, 8],
-                [0, 3, 6],
-                [1, 4, 7],
-                [2, 5, 8],
-                [0, 4, 8],
-                [2, 4, 6],
-            ];
-            return winPatterns.some((pattern) => {
-                const [a, b, c] = pattern;
-                return (
-                    cells[a].innerText === currentPlayer &&
-                    cells[a].innerText === cells[b].innerText &&
-                    cells[a].innerText === cells[c].innerText
-                );
-            });
-        }
+    // Function to start the game between two players
+    function startGame(player, opponent) {
+      document.getElementById('message').innerText = `Match found! ${player} vs ${opponent}`;
+      document.getElementById('playSection').style.display = 'none';
+      document.getElementById('gameBoard').style.display = 'block';
+      playerSymbol = "X";
+      opponentSymbol = "O";
+      listenToGame();
+    }
 
-        function isDraw() {
-            return [...document.querySelectorAll(".cell")].every(
-                (cell) => cell.innerText !== ""
-            );
+    // Function to listen to the game state
+    function listenToGame() {
+      gameRef.on('value', (snapshot) => {
+        const gameData = snapshot.val();
+        if (gameData) {
+          gameState = gameData.gameState;
+          currentPlayer = gameData.currentPlayer;
+          updateBoard();
         }
+      });
+    }
 
-        function resetGame() {
-            document.querySelectorAll(".cell").forEach((cell) => (cell.innerText = ""));
-            currentPlayer = "X";
+    // Function to update the game board
+    function updateBoard() {
+      for (let i = 0; i < 9; i++) {
+        const cell = document.querySelector(`.cell[data-cell='${i}']`);
+        cell.innerText = gameState[i];
+        if (gameState[i] !== null) {
+          cell.classList.add('taken');
+        } else {
+          cell.classList.remove('taken');
         }
-    </script>
+      }
+      checkForWinner();
+    }
+
+    // Handle cell click
+    document.getElementById('gameBoard').addEventListener('click', (event) => {
+      const cell = event.target;
+      const cellIndex = cell.getAttribute('data-cell');
+
+      if (cellIndex && gameState[cellIndex] === null && currentPlayer === playerSymbol) {
+        gameState[cellIndex] = currentPlayer;
+        currentPlayer = currentPlayer === "X" ? "O" : "X";
+        gameRef.set({ gameState, currentPlayer });
+      }
+    });
+
+    // Check for a winner
+    function checkForWinner() {
+      const winPatterns = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8],
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8],
+        [0, 4, 8],
+        [2, 4, 6]
+      ];
+
+      for (let pattern of winPatterns) {
+        const [a, b, c] = pattern;
+        if (gameState[a] && gameState[a] === gameState[b] && gameState[a] === gameState[c]) {
+          setTimeout(() => {
+            alert(`${gameState[a]} Wins!`);
+            resetGame();
+          }, 100);
+          return;
+        }
+      }
+
+      if (gameState.every(cell => cell !== null)) {
+        setTimeout(() => {
+          alert("It's a Draw!");
+          resetGame();
+        }, 100);
+      }
+    }
+
+    // Reset the game after a win or draw
+    function resetGame() {
+      gameState = Array(9).fill(null);
+      currentPlayer = "X";
+      gameRef.set({ gameState, currentPlayer });
+    }
+
+    // Check if the player has already entered a name
+    window.onload = () => {
+      const savedName = localStorage.getItem('playerName');
+      if (savedName) {
+        playerName = savedName;
+        document.getElementById('nameEntry').style.display = 'none';
+        document.getElementById('playSection').style.display = 'block';
+        document.getElementById('message').innerText = 'Name already saved! Click Play to start.';
+      }
+    };
+  </script>
+
 </body>
 </html>
