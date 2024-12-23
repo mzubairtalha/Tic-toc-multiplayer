@@ -116,55 +116,63 @@
 
       var playersRef = db.ref("tic-tac-toe/players");
 
-      playersRef.once("value", function (snapshot) {
+      // Add player to the queue
+      playersRef.child(playerName).set({
+        name: playerName,
+        online: true
+      });
+
+      // Handle disconnection
+      playersRef.child(playerName).onDisconnect().remove();
+
+      // Listen for other players
+      playersRef.on("value", function (snapshot) {
         var players = snapshot.val();
+        if (!players) return;
 
-        if (players && Object.keys(players).length === 1) {
-          var opponent = Object.keys(players)[0];
-          opponentName = players[opponent].name;
+        var onlinePlayers = Object.keys(players).filter((key) => players[key].online && key !== playerName);
 
-          gameKey = "game-" + Date.now();
-          db.ref("tic-tac-toe/games/" + gameKey).set({
-            board: ["", "", "", "", "", "", "", "", ""],
-            turn: "X",
-            players: {
-              X: playerName,
-              O: opponentName
-            }
-          });
-
-          startGame(gameKey, "O");
-        } else {
-          playersRef.child(playerName).set({ name: playerName });
-          playersRef.on("child_removed", function () {
-            db.ref("tic-tac-toe/games").orderByKey().limitToLast(1).once("value", function (gameSnapshot) {
-              var game = gameSnapshot.val();
-              if (game) {
-                gameKey = Object.keys(game)[0];
-                startGame(gameKey, "X");
-              }
-            });
-          });
+        if (onlinePlayers.length > 0) {
+          opponentName = onlinePlayers[0];
+          startGame(playerName, opponentName);
         }
       });
     });
 
-    function startGame(gameKey, symbol) {
-      playerSymbol = symbol;
+    function startGame(player1, player2) {
+      gameKey = "game-" + Date.now();
+      playerSymbol = player1 === playerName ? "X" : "O";
+      opponentName = player1 === playerName ? player2 : player1;
+
+      db.ref("tic-tac-toe/games/" + gameKey).set({
+        board: ["", "", "", "", "", "", "", "", ""],
+        turn: "X",
+        players: {
+          X: player1,
+          O: player2
+        }
+      });
+
+      db.ref("tic-tac-toe/players").off(); // Stop listening to players
+      waitingScreen.style.display = "none";
+      gameContainer.style.display = "block";
+
+      vsDisplay.textContent = player1 + " (X) VS " + player2 + " (O)";
+
+      listenToGameUpdates();
+    }
+
+    function listenToGameUpdates() {
       db.ref("tic-tac-toe/games/" + gameKey).on("value", function (snapshot) {
         var gameData = snapshot.val();
         if (!gameData) return;
 
-        waitingScreen.style.display = "none";
-        gameContainer.style.display = "block";
-
-        vsDisplay.textContent = gameData.players.X + " (X) VS " + gameData.players.O + " (O)";
         currentTurn = gameData.turn;
-
         updateBoard(gameData.board);
 
         if (checkWinner(gameData.board)) {
           messages.textContent = currentTurn === playerSymbol ? "You lose!" : "You win!";
+          db.ref("tic-tac-toe/games/" + gameKey).off();
         } else {
           messages.textContent = currentTurn === playerSymbol ? "Your turn!" : "Opponent's turn!";
         }
