@@ -36,7 +36,12 @@
     #vs-display {
       margin-bottom: 10px;
       font-weight: bold;
+      font-size: 20px;
+    }
+    #current-turn {
+      margin-bottom: 10px;
       font-size: 18px;
+      color: #333;
     }
   </style>
 </head>
@@ -45,14 +50,17 @@
   <div id="join-game">
     <input type="text" id="player-name" placeholder="Enter your name" />
     <button id="play-button">Play</button>
+    <button id="cancel-button" style="display: none;">Cancel</button>
   </div>
 
   <div id="waiting-screen">
     <h2>Waiting for another player...</h2>
+    <p id="timer">Removing in 30 seconds...</p>
   </div>
 
   <div id="game-container">
     <div id="vs-display"></div>
+    <div id="current-turn"></div>
     <table id="game-board">
       <tr>
         <td data-cell="0"></td>
@@ -73,9 +81,10 @@
     <div id="messages"></div>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script>
+    // Firebase configuration
     var firebaseConfig = {
       apiKey: "AIzaSyAgyQsexCYpV0BGfylksrBrdLUTyyCRBHs",
       authDomain: "tic-toc-5d009.firebaseapp.com",
@@ -83,28 +92,35 @@
       projectId: "tic-toc-5d009",
       storageBucket: "tic-toc-5d009.firebasestorage.app",
       messagingSenderId: "430888007998",
-      appId: "1:430888007998:web:8b441ece3ac77af3c7d46f"
+      appId: "1:430888007998:web:8b441ece3ac77af3c7d46f",
+      measurementId: "G-Z4TQWZBGZG",
     };
 
     firebase.initializeApp(firebaseConfig);
-    var db = firebase.database();
+    var database = firebase.database();
 
     var joinGameDiv = document.getElementById("join-game");
     var waitingScreen = document.getElementById("waiting-screen");
     var gameContainer = document.getElementById("game-container");
     var playButton = document.getElementById("play-button");
+    var cancelButton = document.getElementById("cancel-button");
     var playerNameInput = document.getElementById("player-name");
     var gameBoard = document.getElementById("game-board");
     var messages = document.getElementById("messages");
+    var timer = document.getElementById("timer");
     var vsDisplay = document.getElementById("vs-display");
+    var currentTurnDisplay = document.getElementById("current-turn");
 
     var playerName = "";
     var opponentName = "";
     var playerSymbol = "";
-    var currentTurn = "";
-    var gameKey = "";
+    var currentPlayer = "";
+    var timeoutId;
 
-    playButton.addEventListener("click", function () {
+    var playersRef = database.ref("tic-tac-toe/players");
+    var gameRef = database.ref("tic-tac-toe/game");
+
+    playButton.onclick = function () {
       playerName = playerNameInput.value.trim();
       if (!playerName) {
         alert("Please enter your name");
@@ -113,98 +129,94 @@
 
       joinGameDiv.style.display = "none";
       waitingScreen.style.display = "block";
+      cancelButton.style.display = "inline";
 
-      var playersRef = db.ref("tic-tac-toe/players");
-
-      // Add player to the queue
-      playersRef.child(playerName).set({
+      var playerData = {
         name: playerName,
-        online: true
-      });
+        symbol: "X",
+      };
 
-      // Handle disconnection
-      playersRef.child(playerName).onDisconnect().remove();
+      playersRef.child(playerName).set(playerData);
 
-      // Listen for other players
+      timeoutId = setTimeout(function () {
+        playersRef.child(playerName).remove();
+        alert("No match found. You have been removed from the list.");
+        waitingScreen.style.display = "none";
+        joinGameDiv.style.display = "block";
+        cancelButton.style.display = "none";
+      }, 30000);
+
       playersRef.on("value", function (snapshot) {
         var players = snapshot.val();
-        if (!players) return;
+        if (!players || Object.keys(players).length < 2) return;
 
-        var onlinePlayers = Object.keys(players).filter((key) => players[key].online && key !== playerName);
+        var playerKeys = Object.keys(players);
+        var player1 = playerKeys[0];
+        var player2 = playerKeys[1];
 
-        if (onlinePlayers.length > 0) {
-          opponentName = onlinePlayers[0];
-          startGame(playerName, opponentName);
+        if (player1 === playerName || player2 === playerName) {
+          clearTimeout(timeoutId);
+          opponentName = player1 === playerName ? players[player2].name : players[player1].name;
+          playerSymbol = player1 === playerName ? "X" : "O";
+
+          gameRef.set({
+            board: ["", "", "", "", "", "", "", "", ""],
+            turn: "X",
+            players: [player1, player2],
+          });
+
+          waitingScreen.style.display = "none";
+          gameContainer.style.display = "block";
+          vsDisplay.textContent = playerName + " VS " + opponentName;
+
+          playersRef.remove();
         }
       });
-    });
+    };
 
-    function startGame(player1, player2) {
-      gameKey = "game-" + Date.now();
-      playerSymbol = player1 === playerName ? "X" : "O";
-      opponentName = player1 === playerName ? player2 : player1;
-
-      db.ref("tic-tac-toe/games/" + gameKey).set({
-        board: ["", "", "", "", "", "", "", "", ""],
-        turn: "X",
-        players: {
-          X: player1,
-          O: player2
-        }
-      });
-
-      db.ref("tic-tac-toe/players").off(); // Stop listening to players
+    cancelButton.onclick = function () {
+      playersRef.child(playerName).remove();
+      clearTimeout(timeoutId);
       waitingScreen.style.display = "none";
-      gameContainer.style.display = "block";
+      joinGameDiv.style.display = "block";
+      cancelButton.style.display = "none";
+    };
 
-      vsDisplay.textContent = player1 + " (X) VS " + player2 + " (O)";
+    gameRef.on("value", function (snapshot) {
+      var data = snapshot.val();
+      if (!data) return;
 
-      listenToGameUpdates();
-    }
+      currentPlayer = data.turn;
+      var board = data.board;
 
-    function listenToGameUpdates() {
-      db.ref("tic-tac-toe/games/" + gameKey).on("value", function (snapshot) {
-        var gameData = snapshot.val();
-        if (!gameData) return;
-
-        currentTurn = gameData.turn;
-        updateBoard(gameData.board);
-
-        if (checkWinner(gameData.board)) {
-          messages.textContent = currentTurn === playerSymbol ? "You lose!" : "You win!";
-          db.ref("tic-tac-toe/games/" + gameKey).off();
-        } else {
-          messages.textContent = currentTurn === playerSymbol ? "Your turn!" : "Opponent's turn!";
-        }
-      });
-    }
-
-    function updateBoard(board) {
-      var cells = gameBoard.querySelectorAll("td");
+      var cells = gameBoard.getElementsByTagName("td");
       for (var i = 0; i < cells.length; i++) {
         cells[i].textContent = board[i];
-        cells[i].classList.toggle("taken", board[i] !== "");
+        cells[i].className = board[i] ? "taken" : "";
       }
-    }
 
-    gameBoard.addEventListener("click", function (event) {
-      if (currentTurn !== playerSymbol || event.target.classList.contains("taken")) return;
+      currentTurnDisplay.textContent =
+        currentPlayer === playerSymbol ? "Your Turn" : opponentName + "'s Turn";
 
-      var cellIndex = event.target.dataset.cell;
-
-      db.ref("tic-tac-toe/games/" + gameKey).once("value", function (snapshot) {
-        var gameData = snapshot.val();
-        if (gameData.turn === playerSymbol) {
-          var newBoard = gameData.board;
-          newBoard[cellIndex] = playerSymbol;
-
-          db.ref("tic-tac-toe/games/" + gameKey).update({
-            board: newBoard,
-            turn: playerSymbol === "X" ? "O" : "X"
-          });
-        }
-      });
+      var winner = checkWinner(board);
+      if (winner) {
+        messages.textContent =
+          winner === "Draw"
+            ? "It's a draw!"
+            : (winner === "X" ? playerName : opponentName) + " wins!";
+      }
     });
+
+    gameBoard.onclick = function (event) {
+      var target = event.target;
+      if (target.tagName !== "TD" || target.className === "taken" || currentPlayer !== playerSymbol) {
+        return;
+      }
+
+      var cellIndex = target.getAttribute("data-cell");
+      gameRef.child("board").child(cellIndex).set(playerSymbol);
+      gameRef.child("turn").set(playerSymbol === "X" ? "O" : "X");
+    };
 
     function checkWinner(board) {
       var winningCombinations = [
@@ -215,7 +227,7 @@
         [1, 4, 7],
         [2, 5, 8],
         [0, 4, 8],
-        [2, 4, 6]
+        [2, 4, 6],
       ];
 
       for (var i = 0; i < winningCombinations.length; i++) {
@@ -224,7 +236,7 @@
           return board[a];
         }
       }
-      return board.includes("") ? null : "Draw";
+      return board.indexOf("") === -1 ? "Draw" : null;
     }
   </script>
 </body>
