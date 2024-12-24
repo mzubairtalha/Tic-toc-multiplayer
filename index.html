@@ -10,7 +10,7 @@
       text-align: center;
       background-color: #f4f4f4;
     }
-    #game-container, #waiting-screen {
+    #game-container, #waiting-screen, #end-screen {
       display: none;
     }
     table {
@@ -43,19 +43,23 @@
       font-size: 18px;
       color: #333;
     }
+    #end-message {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
   </style>
 </head>
 <body>
   <h1>Tic Tac Toe Multiplayer</h1>
   <div id="join-game">
-    <input type="text" id="player-name" placeholder="Enter your name" />
+    <input type="text" id="player-name" placeholder="Enter your name">
     <button id="play-button">Play</button>
-    <button id="cancel-button" style="display: none;">Cancel</button>
   </div>
 
   <div id="waiting-screen">
     <h2>Waiting for another player...</h2>
-    <p id="timer">Removing in 30 seconds...</p>
   </div>
 
   <div id="game-container">
@@ -81,10 +85,15 @@
     <div id="messages"></div>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <div id="end-screen">
+    <div id="end-message"></div>
+    <button id="play-again-button">Play Again</button>
+    <button id="home-button">Home</button>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
   <script>
-    // Firebase configuration
     var firebaseConfig = {
       apiKey: "AIzaSyAgyQsexCYpV0BGfylksrBrdLUTyyCRBHs",
       authDomain: "tic-toc-5d009.firebaseapp.com",
@@ -97,89 +106,68 @@
     };
 
     firebase.initializeApp(firebaseConfig);
-    var database = firebase.database();
+    var db = firebase.database();
 
     var joinGameDiv = document.getElementById("join-game");
     var waitingScreen = document.getElementById("waiting-screen");
     var gameContainer = document.getElementById("game-container");
+    var endScreen = document.getElementById("end-screen");
     var playButton = document.getElementById("play-button");
-    var cancelButton = document.getElementById("cancel-button");
+    var playAgainButton = document.getElementById("play-again-button");
+    var homeButton = document.getElementById("home-button");
     var playerNameInput = document.getElementById("player-name");
     var gameBoard = document.getElementById("game-board");
-    var messages = document.getElementById("messages");
-    var timer = document.getElementById("timer");
     var vsDisplay = document.getElementById("vs-display");
     var currentTurnDisplay = document.getElementById("current-turn");
+    var endMessage = document.getElementById("end-message");
 
     var playerName = "";
     var opponentName = "";
     var playerSymbol = "";
     var currentPlayer = "";
-    var timeoutId;
 
-    var playersRef = database.ref("tic-tac-toe/players");
-    var gameRef = database.ref("tic-tac-toe/game");
+    var playersRef = db.ref("tic-tac-toe/players");
+    var gameRef = db.ref("tic-tac-toe/game");
+    var playAgainRef = db.ref("tic-tac-toe/game/play-again");
 
     playButton.onclick = function () {
       playerName = playerNameInput.value.trim();
       if (!playerName) {
-        alert("Please enter your name");
+        alert("Please enter your name.");
         return;
       }
 
       joinGameDiv.style.display = "none";
       waitingScreen.style.display = "block";
-      cancelButton.style.display = "inline";
 
-      var playerData = {
+      playersRef.child(playerName).set({
         name: playerName,
         symbol: "X",
-      };
-
-      playersRef.child(playerName).set(playerData);
-
-      timeoutId = setTimeout(function () {
-        playersRef.child(playerName).remove();
-        alert("No match found. You have been removed from the list.");
-        waitingScreen.style.display = "none";
-        joinGameDiv.style.display = "block";
-        cancelButton.style.display = "none";
-      }, 30000);
+      });
 
       playersRef.on("value", function (snapshot) {
         var players = snapshot.val();
         if (!players || Object.keys(players).length < 2) return;
 
         var playerKeys = Object.keys(players);
-        var player1 = playerKeys[0];
-        var player2 = playerKeys[1];
+        var player1 = players[playerKeys[0]];
+        var player2 = players[playerKeys[1]];
 
-        if (player1 === playerName || player2 === playerName) {
-          clearTimeout(timeoutId);
-          opponentName = player1 === playerName ? players[player2].name : players[player1].name;
-          playerSymbol = player1 === playerName ? "X" : "O";
+        if (player1.name === playerName || player2.name === playerName) {
+          opponentName = player1.name === playerName ? player2.name : player1.name;
+          playerSymbol = player1.name === playerName ? "X" : "O";
 
           gameRef.set({
             board: ["", "", "", "", "", "", "", "", ""],
             turn: "X",
-            players: [player1, player2],
+            players: [player1.name, player2.name],
           });
 
           waitingScreen.style.display = "none";
           gameContainer.style.display = "block";
           vsDisplay.textContent = playerName + " VS " + opponentName;
-
-          playersRef.remove();
         }
       });
-    };
-
-    cancelButton.onclick = function () {
-      playersRef.child(playerName).remove();
-      clearTimeout(timeoutId);
-      waitingScreen.style.display = "none";
-      joinGameDiv.style.display = "block";
-      cancelButton.style.display = "none";
     };
 
     gameRef.on("value", function (snapshot) {
@@ -200,23 +188,69 @@
 
       var winner = checkWinner(board);
       if (winner) {
-        messages.textContent =
-          winner === "Draw"
-            ? "It's a draw!"
-            : (winner === "X" ? playerName : opponentName) + " wins!";
+        gameRef.remove();
+        showEndScreen(winner);
       }
     });
 
     gameBoard.onclick = function (event) {
       var target = event.target;
-      if (target.tagName !== "TD" || target.className === "taken" || currentPlayer !== playerSymbol) {
-        return;
-      }
+      if (target.tagName !== "TD" || target.className === "taken" || currentPlayer !== playerSymbol) return;
 
       var cellIndex = target.getAttribute("data-cell");
       gameRef.child("board").child(cellIndex).set(playerSymbol);
       gameRef.child("turn").set(playerSymbol === "X" ? "O" : "X");
     };
+
+    playAgainButton.onclick = function () {
+      playAgainRef.set({
+        inviter: playerName,
+        invitee: opponentName,
+        status: "pending",
+      });
+
+      endMessage.textContent = "Invitation sent to " + opponentName + "...";
+
+      playAgainRef.on("value", function (snapshot) {
+        var data = snapshot.val();
+        if (!data) return;
+
+        if (data.invitee === playerName && data.status === "pending") {
+          var confirmed = confirm(data.inviter + " wants to play again. Do you accept?");
+          playAgainRef.set({
+            inviter: data.inviter,
+            invitee: data.invitee,
+            status: confirmed ? "accepted" : "declined",
+          });
+        } else if (data.status === "accepted") {
+          resetGame();
+        } else if (data.status === "declined" && data.inviter === playerName) {
+          endMessage.textContent = opponentName + " declined your Play Again request.";
+        }
+      });
+    };
+
+    homeButton.onclick = function () {
+      resetUI();
+      gameRef.remove();
+    };
+
+    function resetGame() {
+      gameRef.set({
+        board: ["", "", "", "", "", "", "", "", ""],
+        turn: "X",
+        players: [playerName, opponentName],
+      });
+      endScreen.style.display = "none";
+      gameContainer.style.display = "block";
+    }
+
+    function resetUI() {
+      joinGameDiv.style.display = "block";
+      endScreen.style.display = "none";
+      gameContainer.style.display = "none";
+      waitingScreen.style.display = "none";
+    }
 
     function checkWinner(board) {
       var winningCombinations = [
@@ -236,7 +270,18 @@
           return board[a];
         }
       }
+
       return board.indexOf("") === -1 ? "Draw" : null;
+    }
+
+    function showEndScreen(winner) {
+      gameContainer.style.display = "none";
+      endScreen.style.display = "block";
+      if (winner === "Draw") {
+        endMessage.textContent = "It's a draw!";
+      } else {
+        endMessage.textContent = (winner === playerSymbol ? playerName : opponentName) + " wins!";
+      }
     }
   </script>
 </body>
