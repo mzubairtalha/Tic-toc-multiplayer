@@ -134,10 +134,10 @@
     var playerSymbol = "";
     var currentPlayer = "";
     var timeoutId;
+    var gameActive = true;
 
     var playersRef = database.ref("tic-tac-toe/players");
     var gameRef = database.ref("tic-tac-toe/game");
-    var playAgainRef = database.ref("tic-tac-toe/game/play-again");
 
     playButton.onclick = function () {
       playerName = playerNameInput.value.trim();
@@ -222,11 +222,15 @@
         endMessage.textContent =
           winner === "Draw"
             ? "It's a draw!"
-            : winner + " wins!";
+            : (winner === "X" ? playerName : opponentName) + " wins!";
         endScreen.style.display = "block";
         gameContainer.style.display = "none";
         playAgainButton.style.display = "inline";
         homeButton.style.display = "inline";
+
+        // Show winner's name on both players' screens
+        var winnerName = winner === "X" ? playerName : opponentName;
+        vsDisplay.textContent = winnerName + " wins!";
       }
     });
 
@@ -242,38 +246,35 @@
     };
 
     playAgainButton.onclick = function () {
-      playAgainRef.once("value", function (snapshot) {
+      var playAgainRef = database.ref("tic-tac-toe/game/play-again");
+
+      // Avoid multiple invites
+      if (gameActive) {
+        playAgainRef.set({
+          inviter: playerName,
+          invitee: opponentName,
+          status: "pending",
+        });
+
+        gameActive = false; // Prevent multiple invites
+        endMessage.textContent = "Invitation sent to " + opponentName + "...";
+      }
+
+      playAgainRef.on("value", function (snapshot) {
         var data = snapshot.val();
-        if (!data || data.status !== "pending") {
+        if (!data) return;
+
+        if (data.invitee === playerName && data.status === "pending") {
+          var confirmed = confirm(data.inviter + " wants to play again. Do you accept?");
           playAgainRef.set({
-            inviter: playerName,
-            invitee: opponentName,
-            status: "pending",
+            inviter: data.inviter,
+            invitee: data.invitee,
+            status: confirmed ? "accepted" : "declined",
           });
-
-          endMessage.textContent = "Invitation sent to " + opponentName + "...";
-
-          playAgainRef.on("value", function (snapshot) {
-            var inviteData = snapshot.val();
-            if (!inviteData) return;
-
-            if (inviteData.invitee === playerName && inviteData.status === "pending") {
-              var confirmed = confirm(
-                inviteData.inviter + " wants to play again. Do you accept?"
-              );
-              playAgainRef.set({
-                inviter: inviteData.inviter,
-                invitee: inviteData.invitee,
-                status: confirmed ? "accepted" : "declined",
-              });
-            } else if (inviteData.status === "accepted") {
-              resetGame();
-            } else if (inviteData.status === "declined" && inviteData.inviter === playerName) {
-              endMessage.textContent =
-                opponentName + " declined your Play Again request.";
-              playAgainRef.off();
-            }
-          });
+        } else if (data.status === "accepted") {
+          resetGame();
+        } else if (data.status === "declined" && data.inviter === playerName) {
+          endMessage.textContent = opponentName + " declined your Play Again request.";
         }
       });
     };
@@ -282,21 +283,6 @@
       endScreen.style.display = "none";
       joinGameDiv.style.display = "block";
     };
-
-    function resetGame() {
-      firebase
-        .database()
-        .ref("tic-tac-toe/game")
-        .set({
-          board: ["", "", "", "", "", "", "", "", ""],
-          turn: "X",
-          players: [playerName, opponentName],
-        });
-
-      playAgainRef.off();
-      endScreen.style.display = "none";
-      gameContainer.style.display = "block";
-    }
 
     function checkWinner(board) {
       const winningCombinations = [
@@ -313,11 +299,22 @@
       for (var i = 0; i < winningCombinations.length; i++) {
         var [a, b, c] = winningCombinations[i];
         if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-          return board[a] === "X" ? playerName : opponentName;
+          return board[a];
         }
       }
-
       return board.includes("") ? null : "Draw";
+    }
+
+    function resetGame() {
+      firebase.database().ref("tic-tac-toe/game").set({
+        board: ["", "", "", "", "", "", "", "", ""],
+        turn: "X",
+        players: [playerName, opponentName],
+      });
+
+      endScreen.style.display = "none";
+      gameContainer.style.display = "block";
+      gameActive = true;
     }
   </script>
 </body>
