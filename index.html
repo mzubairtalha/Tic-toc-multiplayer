@@ -6,92 +6,151 @@
   <title>Tic Tac Toe Multiplayer</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background-color: #f4f4f4;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: linear-gradient(to bottom, #ff9a9e, #fad0c4);
+    background-repeat: no-repeat;
+    background-size: cover;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+  }
+
+    h1 {
+      font-size: 18px;
+      padding: 10px;
+      background: #333;
+      color: #fff;
+      margin: 0;
     }
+
     #game-container, #waiting-screen, #end-screen {
       display: none;
+      padding: 10px;
     }
+
+    #join-game input {
+      width: 80%;
+      padding: 5px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    #join-game button, #play-again-button, #home-button, #cancel-button {
+      display: inline-block;
+      background: #4CAF50;
+      color: #fff;
+      padding: 8px 12px;
+      margin: 5px;
+      border: none;
+      border-radius: 5px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    #join-game button:hover {
+      background: #45a049;
+    }
+
     table {
-      margin: 20px auto;
+      margin: 10px auto;
       border-collapse: collapse;
+      width: 80%;
     }
+
     td {
-      width: 50px;
-      height: 50px;
+      width: 60px;
+      height: 60px;
       border: 1px solid #000;
       font-size: 24px;
       text-align: center;
       vertical-align: middle;
+      background: #f1f1f1;
       cursor: pointer;
     }
+
     td.taken {
+      background: #ccc;
       cursor: not-allowed;
     }
+
     #messages {
-      margin-top: 20px;
+      margin-top: 10px;
       color: green;
+      font-size: 14px;
     }
+
     #vs-display {
-      margin-bottom: 10px;
+      margin-bottom: 5px;
       font-weight: bold;
-      font-size: 20px;
+      font-size: 16px;
     }
+
     #current-turn {
-      margin-bottom: 10px;
-      font-size: 18px;
-      color: #333;
+      font-size: 14px;
+      color: #444;
     }
+
     #end-screen {
-      margin-top: 20px;
+      margin-top: 10px;
+      font-size: 14px;
     }
-    #end-buttons {
-      margin-top: 20px;
+
+    #timer {
+      color: #ff5722;
+      font-weight: bold;
+    }
+
+    button:focus {
+      outline: 2px solid #4CAF50;
     }
   </style>
 </head>
 <body>
-  <h1>Tic Tac Toe Multiplayer</h1>
-  <div id="join-game">
-    <input type="text" id="player-name" placeholder="Enter your name" />
-    <button id="play-button">Play</button>
-    <button id="cancel-button" style="display: none;">Cancel</button>
-  </div>
+  <div class="container">
+    <h1>Tic Tac Toe Multiplayer</h1>
+    <div id="join-game">
+      <input type="text" id="player-name" placeholder="Enter your name" />
+      <button id="play-button">Play</button>
+      <button id="cancel-button" style="display: none;">Cancel</button>
+    </div>
 
-  <div id="waiting-screen">
-    <h2>Waiting for another player...</h2>
-    <p id="timer">Removing in 30 seconds...</p>
-  </div>
+    <div id="waiting-screen">
+      <h2>Waiting for another player...</h2>
+      <p id="timer">Removing in 30 seconds...</p>
+    </div>
 
-  <div id="game-container">
-    <div id="vs-display"></div>
-    <div id="current-turn"></div>
-    <table id="game-board">
-      <tr>
-        <td data-cell="0"></td>
-        <td data-cell="1"></td>
-        <td data-cell="2"></td>
-      </tr>
-      <tr>
-        <td data-cell="3"></td>
-        <td data-cell="4"></td>
-        <td data-cell="5"></td>
-      </tr>
-      <tr>
-        <td data-cell="6"></td>
-        <td data-cell="7"></td>
-        <td data-cell="8"></td>
-      </tr>
-    </table>
-    <div id="messages"></div>
-  </div>
+    <div id="game-container">
+      <div id="vs-display"></div>
+      <div id="current-turn"></div>
+      <table id="game-board">
+        <tr>
+          <td data-cell="0"></td>
+          <td data-cell="1"></td>
+          <td data-cell="2"></td>
+        </tr>
+        <tr>
+          <td data-cell="3"></td>
+          <td data-cell="4"></td>
+          <td data-cell="5"></td>
+        </tr>
+        <tr>
+          <td data-cell="6"></td>
+          <td data-cell="7"></td>
+          <td data-cell="8"></td>
+        </tr>
+      </table>
+      <div id="messages"></div>
+    </div>
 
-  <div id="end-screen">
-    <div id="end-message"></div>
-    <div id="end-buttons">
-      <button id="play-again-button" style="display: none;">Play Again</button>
-      <button id="home-button" style="display: none;">Home</button>
+    <div id="end-screen">
+      <div id="end-message"></div>
+      <div id="end-buttons">
+        <button id="play-again-button" style="display: none;">Play Again</button>
+        <button id="home-button" style="display: none;">Home</button>
+      </div>
     </div>
   </div>
 
@@ -138,6 +197,7 @@
 
     var playersRef = database.ref("tic-tac-toe/players");
     var gameRef = database.ref("tic-tac-toe/game");
+    var playAgainRef = database.ref("tic-tac-toe/game/play-again");
 
     playButton.onclick = function () {
       playerName = playerNameInput.value.trim();
@@ -219,17 +279,17 @@
 
       var winner = checkWinner(board);
       if (winner) {
+        var winnerName = winner === "X" ? playerName : opponentName;
         endMessage.textContent =
           winner === "Draw"
             ? "It's a draw!"
-            : (winner === "X" ? playerName : opponentName) + " wins!";
+            : winnerName + " wins!";
         endScreen.style.display = "block";
         gameContainer.style.display = "none";
         playAgainButton.style.display = "inline";
         homeButton.style.display = "inline";
 
         // Show winner's name on both players' screens
-        var winnerName = winner === "X" ? playerName : opponentName;
         vsDisplay.textContent = winnerName + " wins!";
       }
     });
@@ -246,9 +306,6 @@
     };
 
     playAgainButton.onclick = function () {
-      var playAgainRef = database.ref("tic-tac-toe/game/play-again");
-
-      // Avoid multiple invites
       if (gameActive) {
         playAgainRef.set({
           inviter: playerName,
@@ -299,7 +356,7 @@
       for (var i = 0; i < winningCombinations.length; i++) {
         var [a, b, c] = winningCombinations[i];
         if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-          return board[a];
+          return board[a]; // Return 'X' or 'O' to indicate the winner
         }
       }
       return board.includes("") ? null : "Draw";
