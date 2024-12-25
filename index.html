@@ -241,28 +241,31 @@
     };
 
     playAgainButton.onclick = function () {
-      // Notify the opponent about the "Play Again" request
       var playAgainRef = database.ref("tic-tac-toe/game/play-again");
-      playAgainRef.set({ inviter: playerName, invitee: opponentName });
+
+      playAgainRef.set({
+        inviter: playerName,
+        invitee: opponentName,
+        status: "pending",
+      });
+
+      endMessage.textContent = "Invitation sent to " + opponentName + "...";
 
       playAgainRef.on("value", function (snapshot) {
         var data = snapshot.val();
-        if (data && data.invitee === playerName) {
-          var confirmed = confirm(opponentName + " wants to play again. Do you accept?");
-          if (confirmed) {
-            // Reset the game and start over
-            gameRef.set({
-              board: ["", "", "", "", "", "", "", "", ""],
-              turn: "X",
-              players: [playerName, opponentName],
-            });
-            endScreen.style.display = "none";
-            gameContainer.style.display = "block";
-          } else {
-            // Both players go to home
-            alert("Game Over. Returning to home.");
-            homeButton.onclick();
-          }
+        if (!data) return;
+
+        if (data.invitee === playerName && data.status === "pending") {
+          var confirmed = confirm(data.inviter + " wants to play again. Do you accept?");
+          playAgainRef.set({
+            inviter: data.inviter,
+            invitee: data.invitee,
+            status: confirmed ? "accepted" : "declined",
+          });
+        } else if (data.status === "accepted") {
+          resetGame();
+        } else if (data.status === "declined" && data.inviter === playerName) {
+          endMessage.textContent = opponentName + " declined your Play Again request.";
         }
       });
     };
@@ -271,6 +274,20 @@
       endScreen.style.display = "none";
       joinGameDiv.style.display = "block";
     };
+
+    function resetGame() {
+      firebase
+        .database()
+        .ref("tic-tac-toe/game")
+        .set({
+          board: ["", "", "", "", "", "", "", "", ""],
+          turn: "X",
+          players: [playerName, opponentName],
+        });
+
+      endScreen.style.display = "none";
+      gameContainer.style.display = "block";
+    }
 
     function checkWinner(board) {
       const winningCombinations = [
