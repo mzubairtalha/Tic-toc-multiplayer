@@ -137,6 +137,7 @@
 
     var playersRef = database.ref("tic-tac-toe/players");
     var gameRef = database.ref("tic-tac-toe/game");
+    var playAgainRef = database.ref("tic-tac-toe/game/play-again");
 
     playButton.onclick = function () {
       playerName = playerNameInput.value.trim();
@@ -221,7 +222,7 @@
         endMessage.textContent =
           winner === "Draw"
             ? "It's a draw!"
-            : (winner === "X" ? playerName : opponentName) + " wins!";
+            : winner + " wins!";
         endScreen.style.display = "block";
         gameContainer.style.display = "none";
         playAgainButton.style.display = "inline";
@@ -241,31 +242,38 @@
     };
 
     playAgainButton.onclick = function () {
-      var playAgainRef = database.ref("tic-tac-toe/game/play-again");
-
-      playAgainRef.set({
-        inviter: playerName,
-        invitee: opponentName,
-        status: "pending",
-      });
-
-      endMessage.textContent = "Invitation sent to " + opponentName + "...";
-
-      playAgainRef.on("value", function (snapshot) {
+      playAgainRef.once("value", function (snapshot) {
         var data = snapshot.val();
-        if (!data) return;
-
-        if (data.invitee === playerName && data.status === "pending") {
-          var confirmed = confirm(data.inviter + " wants to play again. Do you accept?");
+        if (!data || data.status !== "pending") {
           playAgainRef.set({
-            inviter: data.inviter,
-            invitee: data.invitee,
-            status: confirmed ? "accepted" : "declined",
+            inviter: playerName,
+            invitee: opponentName,
+            status: "pending",
           });
-        } else if (data.status === "accepted") {
-          resetGame();
-        } else if (data.status === "declined" && data.inviter === playerName) {
-          endMessage.textContent = opponentName + " declined your Play Again request.";
+
+          endMessage.textContent = "Invitation sent to " + opponentName + "...";
+
+          playAgainRef.on("value", function (snapshot) {
+            var inviteData = snapshot.val();
+            if (!inviteData) return;
+
+            if (inviteData.invitee === playerName && inviteData.status === "pending") {
+              var confirmed = confirm(
+                inviteData.inviter + " wants to play again. Do you accept?"
+              );
+              playAgainRef.set({
+                inviter: inviteData.inviter,
+                invitee: inviteData.invitee,
+                status: confirmed ? "accepted" : "declined",
+              });
+            } else if (inviteData.status === "accepted") {
+              resetGame();
+            } else if (inviteData.status === "declined" && inviteData.inviter === playerName) {
+              endMessage.textContent =
+                opponentName + " declined your Play Again request.";
+              playAgainRef.off();
+            }
+          });
         }
       });
     };
@@ -285,6 +293,7 @@
           players: [playerName, opponentName],
         });
 
+      playAgainRef.off();
       endScreen.style.display = "none";
       gameContainer.style.display = "block";
     }
@@ -304,9 +313,10 @@
       for (var i = 0; i < winningCombinations.length; i++) {
         var [a, b, c] = winningCombinations[i];
         if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-          return board[a];
+          return board[a] === "X" ? playerName : opponentName;
         }
       }
+
       return board.includes("") ? null : "Draw";
     }
   </script>
