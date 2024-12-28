@@ -382,26 +382,72 @@ button:focus {
       joinGameDiv.style.display = "block";
     };
 
-    function checkWinner(board) {
-      const winningCombinations = [
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-        [0, 3, 6],
-        [1, 4, 7],
-        [2, 5, 8],
-        [0, 4, 8],
-        [2, 4, 6],
-      ];
+    // Modify the checkWinner function to set the winner in the game state
+function checkWinner(board) {
+  const winningCombinations = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
 
-      for (var i = 0; i < winningCombinations.length; i++) {
-        var [a, b, c] = winningCombinations[i];
-        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-          return board[a]; // Return 'X' or 'O' to indicate the winner
-        }
-      }
-      return board.includes("") ? null : "Draw";
+  for (var i = 0; i < winningCombinations.length; i++) {
+    var [a, b, c] = winningCombinations[i];
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      // Return 'X' or 'O' to indicate the winner
+      return board[a];
     }
+  }
+  return board.includes("") ? null : "Draw";
+}
+
+// Update the gameRef listener to handle winner logic
+gameRef.on("value", function (snapshot) {
+  var data = snapshot.val();
+  if (!data) return;
+
+  currentPlayer = data.turn;
+  var board = data.board;
+
+  var cells = gameBoard.getElementsByTagName("td");
+  for (var i = 0; i < cells.length; i++) {
+    cells[i].textContent = board[i];
+    cells[i].className = board[i] ? "taken" : "";
+  }
+
+  currentTurnDisplay.textContent =
+    currentPlayer === playerSymbol ? "Your Turn" : opponentName + "'s Turn";
+
+  var winner = checkWinner(board);
+  if (winner) {
+    var winnerName =
+      winner === "X"
+        ? data.players[0] === playerName
+          ? playerName
+          : opponentName
+        : data.players[1] === playerName
+        ? playerName
+        : opponentName;
+
+    gameRef.child("winner").set(winnerName); // Update the game state with the winner's name
+
+    endMessage.textContent =
+      winner === "Draw"
+        ? "It's a draw!"
+        : winnerName + " wins!";
+    endScreen.style.display = "block";
+    gameContainer.style.display = "none";
+    playAgainButton.style.display = "inline";
+    homeButton.style.display = "inline";
+
+    // Show the winner's name on both players' screens
+    vsDisplay.textContent = winnerName + " wins!";
+  }
+});
 
     function resetGame() {
       firebase.database().ref("tic-tac-toe/game").set({
