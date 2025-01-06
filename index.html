@@ -4,186 +4,199 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chit Chat</title>
-  <style>
-    /* Add your styles here */
-    .hidden { display: none; }
-    .chat-box { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; }
-    .search-bar { width: 100%; padding: 10px; margin: 5px 0; }
-    button { padding: 10px 20px; margin: 5px; }
-  </style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>Chit Chat</header>
 
-  <!-- Name Input Section -->
-  <div id="name-container">
-    <input type="text" id="nameInput" placeholder="Enter Your Name" class="search-bar">
-    <button onclick="saveName()">Save</button>
+<header>Chit Chat</header>
+
+<div id="name-container">
+  <input type="text" id="nameInput" placeholder="Enter Your Name">
+  <button id="saveNameBtn">Save</button>
+</div>
+
+<div id="main-interface" style="display: none;">
+  <div id="search-container">
+    <input type="text" id="searchUserInput" placeholder="Search User">
+    <button id="searchUserBtn">Search</button>
   </div>
-
-  <!-- Main Interface -->
-  <div id="main-interface" class="hidden">
-    <div id="search-container">
-      <input type="text" id="searchUserInput" class="search-bar" placeholder="Search User">
-      <button onclick="searchUser()">Search</button>
-    </div>
-    <button onclick="loadWorldChat()">World Chat</button>
-    <div id="recent-chats">
-      <h3>Recent Chats</h3>
-      <div id="recentChatsContainer"></div>
-    </div>
+  <button id="worldChatBtn">World Chat</button>
+  <div id="recent-chats">
+    <h3>Recent Chats</h3>
+    <div id="recentChatsContainer"></div>
   </div>
+</div>
 
-  <!-- World Chat -->
-  <div id="world-chat" class="hidden">
-    <h2>World Chat</h2>
-    <div id="chat-box-world" class="chat-box"></div>
-    <textarea id="messageInputWorld" placeholder="Type your message" class="search-bar"></textarea>
-    <button onclick="sendWorldMessage()">Send</button>
-    <button onclick="loadMainInterface()">Back</button>
-  </div>
+<div id="world-chat" style="display: none;">
+  <h2>World Chat</h2>
+  <div id="chat-box"></div>
+  <textarea id="messageInput" placeholder="Type your message"></textarea>
+  <button id="sendWorldMessageBtn">Send</button>
+  <button id="backToMainBtn">Back</button>
+</div>
 
-  <!-- Private Chat -->
-  <div id="private-chat" class="hidden">
-    <h2 id="private-chat-title"></h2>
-    <div id="chat-box-private" class="chat-box"></div>
-    <textarea id="messageInputPrivate" placeholder="Type your message" class="search-bar"></textarea>
-    <button id="sendPrivateMessageButton">Send</button>
-    <button onclick="loadMainInterface()">Back</button>
-  </div>
+<div id="private-chat" style="display: none;">
+  <h2 id="chatWithTitle"></h2>
+  <div id="privateChatBox"></div>
+  <textarea id="privateMessageInput" placeholder="Type your message"></textarea>
+  <button id="sendPrivateMessageBtn">Send</button>
+  <button id="backToMainFromPrivateBtn">Back</button>
+</div>
+<script>
+  (function () {
+  var firebaseConfig = {
+    apiKey: "AIzaSyCE5gLp99K4IUq6V-BhlmgOcTtTjjG6WpU",
+    authDomain: "chat-app-9d3d2.firebaseapp.com",
+    databaseURL: "https://chat-app-9d3d2-default-rtdb.firebaseio.com",
+    projectId: "chat-app-9d2d2",
+    storageBucket: "chat-app-9d2d2.appspot.com",
+    messagingSenderId: "110218700281",
+    appId: "1:110218700281:web:470b92a7e4b223a0660928",
+    measurementId: "G-PZKV7JTD5K",
+  };
 
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  <script>
-    // Firebase Configuration
-    const firebaseConfig = {
-  apiKey: "AIzaSyCE5gLp99K4IUq6V-BhlmgOcTtTjjG6WpU",
-  authDomain: "chat-app-9d3d2.firebaseapp.com",
-  databaseURL: "https://chat-app-9d3d2-default-rtdb.firebaseio.com",
-  projectId: "chat-app-9d3d2",
-  storageBucket: "chat-app-9d3d2.firebasestorage.app",
-  messagingSenderId: "110218700281",
-  appId: "1:110218700281:web:470b92a7e4b223a0660928",
-  measurementId: "G-PZKV7JTD5K"
-};
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  var db = firebase.database();
 
-    let userName = localStorage.getItem("chatAppName");
+  // DOM Elements
+  var nameContainer = document.getElementById("name-container");
+  var mainInterface = document.getElementById("main-interface");
+  var worldChatSection = document.getElementById("world-chat");
+  var privateChatSection = document.getElementById("private-chat");
 
-    // Show Name Input Section if Name Not Saved
-    if (!userName) {
-      document.getElementById("name-container").classList.remove("hidden");
-    } else {
+  var nameInput = document.getElementById("nameInput");
+  var saveNameBtn = document.getElementById("saveNameBtn");
+  var searchUserInput = document.getElementById("searchUserInput");
+  var searchUserBtn = document.getElementById("searchUserBtn");
+  var worldChatBtn = document.getElementById("worldChatBtn");
+  var backToMainBtn = document.getElementById("backToMainBtn");
+
+  var recentChatsContainer = document.getElementById("recentChatsContainer");
+  var chatBox = document.getElementById("chat-box");
+  var messageInput = document.getElementById("messageInput");
+  var sendWorldMessageBtn = document.getElementById("sendWorldMessageBtn");
+
+  var chatWithTitle = document.getElementById("chatWithTitle");
+  var privateChatBox = document.getElementById("privateChatBox");
+  var privateMessageInput = document.getElementById("privateMessageInput");
+  var sendPrivateMessageBtn = document.getElementById("sendPrivateMessageBtn");
+  var backToMainFromPrivateBtn = document.getElementById("backToMainFromPrivateBtn");
+
+  var userName = localStorage.getItem("chatAppName");
+
+  // Show name input if not saved
+  if (!userName) {
+    nameContainer.style.display = "block";
+  } else {
+    loadMainInterface();
+  }
+
+  saveNameBtn.onclick = function () {
+    userName = nameInput.value.trim();
+    if (userName) {
+      localStorage.setItem("chatAppName", userName);
+      db.ref("users/" + userName).update({ online: true });
       loadMainInterface();
     }
+  };
 
-    function saveName() {
-      const nameInput = document.getElementById("nameInput").value.trim();
-      if (nameInput) {
-        userName = nameInput;
-        localStorage.setItem("chatAppName", userName);
-        db.ref("users/" + userName).update({ online: true });
-        document.getElementById("name-container").classList.add("hidden");
-        loadMainInterface();
+  function loadMainInterface() {
+    nameContainer.style.display = "none";
+    mainInterface.style.display = "block";
+    displayRecentChats();
+  }
+
+  function displayRecentChats() {
+    recentChatsContainer.innerHTML = "";
+    db.ref("users/" + userName + "/recentChats").on("value", function (snapshot) {
+      var chats = snapshot.val() || {};
+      for (var chatUser in chats) {
+        var chatButton = document.createElement("button");
+        chatButton.textContent = chatUser;
+        chatButton.onclick = function () {
+          startPrivateChat(chatUser);
+        };
+        recentChatsContainer.appendChild(chatButton);
       }
-    }
+    });
+  }
 
-    function loadMainInterface() {
-      document.getElementById("main-interface").classList.remove("hidden");
-      document.getElementById("world-chat").classList.add("hidden");
-      document.getElementById("private-chat").classList.add("hidden");
-      displayRecentChats();
-    }
+  worldChatBtn.onclick = function () {
+    mainInterface.style.display = "none";
+    worldChatSection.style.display = "block";
+    loadWorldChatMessages();
+  };
 
-    function displayRecentChats() {
-      const recentChatsContainer = document.getElementById("recentChatsContainer");
-      db.ref("users/" + userName + "/recentChats").on("value", function(snapshot) {
-        recentChatsContainer.innerHTML = "";
-        const recentChats = snapshot.val() || {};
-        for (const chatUser in recentChats) {
-          const chatButton = document.createElement("button");
-          chatButton.textContent = chatUser;
-          chatButton.onclick = function() { startPrivateChat(chatUser); };
-          recentChatsContainer.appendChild(chatButton);
-        }
+  backToMainBtn.onclick = function () {
+    worldChatSection.style.display = "none";
+    mainInterface.style.display = "block";
+  };
+
+  function loadWorldChatMessages() {
+    chatBox.innerHTML = "";
+    db.ref("world-chat").limitToLast(15).on("value", function (snapshot) {
+      snapshot.forEach(function (childSnapshot) {
+        var message = childSnapshot.val();
+        var messageDiv = document.createElement("div");
+        messageDiv.textContent = message.sender + ": " + message.text;
+        chatBox.appendChild(messageDiv);
       });
-    }
+    });
+  }
 
-    function searchUser() {
-      const searchUserInput = document.getElementById("searchUserInput").value.trim();
-      if (!searchUserInput) {
-        alert("Enter a user name to search.");
-        return;
-      }
-      db.ref("users/" + searchUserInput).once("value", function(snapshot) {
-        if (snapshot.exists()) {
-          startPrivateChat(searchUserInput);
-        } else {
-          alert("User not found.");
-        }
+  sendWorldMessageBtn.onclick = function () {
+    var message = messageInput.value.trim();
+    if (message) {
+      db.ref("world-chat").push({ sender: userName, text: message, timestamp: Date.now() });
+      messageInput.value = "";
+    }
+  };
+
+  function startPrivateChat(chatUser) {
+    mainInterface.style.display = "none";
+    privateChatSection.style.display = "block";
+    chatWithTitle.textContent = "Chat with " + chatUser;
+
+    loadPrivateChatMessages(chatUser);
+
+    sendPrivateMessageBtn.onclick = function () {
+      sendPrivateMessage(chatUser);
+    };
+
+    backToMainFromPrivateBtn.onclick = function () {
+      privateChatSection.style.display = "none";
+      mainInterface.style.display = "block";
+    };
+  }
+
+  function loadPrivateChatMessages(chatUser) {
+    privateChatBox.innerHTML = "";
+    var chatRef = db.ref("private-chats/" + userName + "-" + chatUser).limitToLast(15);
+    chatRef.on("value", function (snapshot) {
+      snapshot.forEach(function (childSnapshot) {
+        var message = childSnapshot.val();
+        var messageDiv = document.createElement("div");
+        messageDiv.textContent = message.sender + ": " + message.text;
+        privateChatBox.appendChild(messageDiv);
       });
-    }
+    });
+  }
 
-    function loadWorldChat() {
-      document.getElementById("main-interface").classList.add("hidden");
-      document.getElementById("world-chat").classList.remove("hidden");
-      db.ref("world-chat").limitToLast(10).on("value", function(snapshot) {
-        const chatBox = document.getElementById("chat-box-world");
-        chatBox.innerHTML = "";
-        snapshot.forEach(function(childSnapshot) {
-          const message = childSnapshot.val();
-          const messageDiv = document.createElement("div");
-          messageDiv.textContent = message.sender + ": " + message.text;
-          chatBox.appendChild(messageDiv);
-        });
-      });
+  function sendPrivateMessage(chatUser) {
+    var message = privateMessageInput.value.trim();
+    if (message) {
+      var chatRef = db.ref("private-chats/" + userName + "-" + chatUser);
+      chatRef.push({ sender: userName, text: message, timestamp: Date.now() });
+      privateMessageInput.value = "";
     }
+  }
+})();
 
-    function sendWorldMessage() {
-      const messageInput = document.getElementById("messageInputWorld").value.trim();
-      if (messageInput) {
-        db.ref("world-chat").push({
-          sender: userName,
-          text: messageInput,
-          timestamp: Date.now()
-        });
-        document.getElementById("messageInputWorld").value = "";
-      } else {
-        alert("Message cannot be empty.");
-      }
-    }
-
-    function startPrivateChat(otherUser) {
-      document.getElementById("main-interface").classList.add("hidden");
-      document.getElementById("private-chat").classList.remove("hidden");
-      document.getElementById("private-chat-title").textContent = "Chat with " + otherUser;
-      db.ref(`private-chats/${userName}-${otherUser}`).on("value", function(snapshot) {
-        const chatBox = document.getElementById("chat-box-private");
-        chatBox.innerHTML = "";
-        snapshot.forEach(function(childSnapshot) {
-          const message = childSnapshot.val();
-          const messageDiv = document.createElement("div");
-          messageDiv.textContent = message.sender + ": " + message.text;
-          chatBox.appendChild(messageDiv);
-        });
-      });
-      document.getElementById("sendPrivateMessageButton").onclick = function() {
-        sendPrivateMessage(otherUser);
-      };
-    }
-
-    function sendPrivateMessage(otherUser) {
-      const messageInput = document.getElementById("messageInputPrivate").value.trim();
-      if (messageInput) {
-        const message = { sender: userName, text: messageInput, timestamp: Date.now() };
-        db.ref(`private-chats/${userName}-${otherUser}`).push(message);
-        db.ref(`private-chats/${otherUser}-${userName}`).push(message);
-        document.getElementById("messageInputPrivate").value = "";
-      } else {
-        alert("Message cannot be empty.");
-      }
-    }
-  </script>
+  
+</script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
