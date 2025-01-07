@@ -3,200 +3,460 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chit Chat</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Tic Tac Toe Multiplayer</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      text-align: center;
+      background: linear-gradient(to bottom, #6a11cb, #2575fc);
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    h1 {
+      font-size: 22px;
+      padding: 15px;
+      margin: 0;
+      background: #333;
+      color: #fff;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    }
+
+    header {
+      padding: 10px;
+      background: #444;
+      color: #fff;
+      font-size: 18px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    #game-container,
+    #waiting-screen,
+    #end-screen {
+      display: none;
+      padding: 15px;
+    }
+
+    #join-game input {
+      width: 90%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: none;
+      border-radius: 25px;
+      font-size: 16px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    #join-game button,
+    #play-again-button,
+    #home-button,
+    #cancel-button {
+      display: inline-block;
+      background: linear-gradient(45deg, #ff5722, #ff9800);
+      color: #fff;
+      padding: 10px 20px;
+      margin: 10px;
+      border: none;
+      border-radius: 25px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+      width: 90%;
+    }
+
+    td {
+      width: 70px;
+      height: 70px;
+      border: 2px solid #333;
+      font-size: 28px;
+      text-align: center;
+      vertical-align: middle;
+      background: #fff;
+      color: #444;
+      cursor: pointer;
+      border-radius: 10px;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+
+    footer {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      padding: 10px 0;
+      background: #333;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    .navItem:focus {
+      outline: 3px solid #03a9f4;
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <h1>Tic Tac Toe Multiplayer</h1>
+    <div id="join-game">
+      <input type="text" id="player-name" placeholder="Enter your name" class="navItem" />
+      <button id="play-button" class="navItem">Play</button>
+      <button id="cancel-button" class="navItem" style="display: none;">Cancel</button>
+    </div>
 
-<header>Chit Chat</header>
+    <div id="waiting-screen">
+      <h2>Waiting for another player...</h2>
+      <p id="timer">Removing in 30 seconds...</p>
+    </div>
 
-<div id="name-container">
-  <input type="text" id="nameInput" placeholder="Enter Your Name">
-  <button id="saveNameBtn">Save</button>
-</div>
+    <div id="game-container">
+      <div id="vs-display"></div>
+      <div id="current-turn"></div>
+      <table id="game-board">
+        <tr>
+          <td data-cell="0" class="navItem" tabindex="0"></td>
+          <td data-cell="1" class="navItem" tabindex="0"></td>
+          <td data-cell="2" class="navItem" tabindex="0"></td>
+        </tr>
+        <tr>
+          <td data-cell="3" class="navItem" tabindex="0"></td>
+          <td data-cell="4" class="navItem" tabindex="0"></td>
+          <td data-cell="5" class="navItem" tabindex="0"></td>
+        </tr>
+        <tr>
+          <td data-cell="6" class="navItem" tabindex="0"></td>
+          <td data-cell="7" class="navItem" tabindex="0"></td>
+          <td data-cell="8" class="navItem" tabindex="0"></td>
+        </tr>
+      </table>
+      <div id="messages"></div>
+    </div>
 
-<div id="main-interface" style="display: none;">
-  <div id="search-container">
-    <input type="text" id="searchUserInput" placeholder="Search User">
-    <button id="searchUserBtn">Search</button>
+    <div id="end-screen">
+      <div id="end-message"></div>
+      <div id="end-buttons">
+        <button id="play-again-button" class="navItem" style="display: none;">Play Again</button>
+        <button id="home-button" class="navItem" style="display: none;">Home</button>
+      </div>
+    </div>
   </div>
-  <button id="worldChatBtn">World Chat</button>
-  <div id="recent-chats">
-    <h3>Recent Chats</h3>
-    <div id="recentChatsContainer"></div>
-  </div>
-</div>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  
+  <script>
+    // Navigation logic
+    function nav(move) {
+      const currentElement = document.activeElement;
+      const items = document.querySelectorAll('.navItem');
+      const currentIndex = [...items].indexOf(currentElement);
+      const nextIndex = currentIndex + move;
 
-<div id="world-chat" style="display: none;">
-  <h2>World Chat</h2>
-  <div id="chat-box"></div>
-  <textarea id="messageInput" placeholder="Type your message"></textarea>
-  <button id="sendWorldMessageBtn">Send</button>
-  <button id="backToMainBtn">Back</button>
-</div>
-
-<div id="private-chat" style="display: none;">
-  <h2 id="chatWithTitle"></h2>
-  <div id="privateChatBox"></div>
-  <textarea id="privateMessageInput" placeholder="Type your message"></textarea>
-  <button id="sendPrivateMessageBtn">Send</button>
-  <button id="backToMainFromPrivateBtn">Back</button>
-</div>
-<script>
-  (function () {
-  var firebaseConfig = {
-    apiKey: "AIzaSyCE5gLp99K4IUq6V-BhlmgOcTtTjjG6WpU",
-    authDomain: "chat-app-9d3d2.firebaseapp.com",
-    databaseURL: "https://chat-app-9d3d2-default-rtdb.firebaseio.com",
-    projectId: "chat-app-9d2d2",
-    storageBucket: "chat-app-9d2d2.appspot.com",
-    messagingSenderId: "110218700281",
-    appId: "1:110218700281:web:470b92a7e4b223a0660928",
-    measurementId: "G-PZKV7JTD5K",
-  };
-
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  var db = firebase.database();
-
-  // DOM Elements
-  var nameContainer = document.getElementById("name-container");
-  var mainInterface = document.getElementById("main-interface");
-  var worldChatSection = document.getElementById("world-chat");
-  var privateChatSection = document.getElementById("private-chat");
-
-  var nameInput = document.getElementById("nameInput");
-  var saveNameBtn = document.getElementById("saveNameBtn");
-  var searchUserInput = document.getElementById("searchUserInput");
-  var searchUserBtn = document.getElementById("searchUserBtn");
-  var worldChatBtn = document.getElementById("worldChatBtn");
-  var backToMainBtn = document.getElementById("backToMainBtn");
-
-  var recentChatsContainer = document.getElementById("recentChatsContainer");
-  var chatBox = document.getElementById("chat-box");
-  var messageInput = document.getElementById("messageInput");
-  var sendWorldMessageBtn = document.getElementById("sendWorldMessageBtn");
-
-  var chatWithTitle = document.getElementById("chatWithTitle");
-  var privateChatBox = document.getElementById("privateChatBox");
-  var privateMessageInput = document.getElementById("privateMessageInput");
-  var sendPrivateMessageBtn = document.getElementById("sendPrivateMessageBtn");
-  var backToMainFromPrivateBtn = document.getElementById("backToMainFromPrivateBtn");
-
-  var userName = localStorage.getItem("chatAppName");
-
-  // Show name input if not saved
-  if (!userName) {
-    nameContainer.style.display = "block";
-  } else {
-    loadMainInterface();
-  }
-
-  saveNameBtn.onclick = function () {
-    userName = nameInput.value.trim();
-    if (userName) {
-      localStorage.setItem("chatAppName", userName);
-      db.ref("users/" + userName).update({ online: true });
-      loadMainInterface();
+      if (items[nextIndex]) {
+        items[nextIndex].focus();
+      }
     }
-  };
 
-  function loadMainInterface() {
-    nameContainer.style.display = "none";
-    mainInterface.style.display = "block";
-    displayRecentChats();
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowDown') nav(1);
+      if (event.key === 'ArrowUp') nav(-1);
+    });
+
+
+    // Firebase configuration
+    var firebaseConfig = {
+      apiKey: "AIzaSyAgyQsexCYpV0BGfylksrBrdLUTyyCRBHs",
+      authDomain: "tic-toc-5d009.firebaseapp.com",
+      databaseURL: "https://tic-toc-5d009-default-rtdb.firebaseio.com",
+      projectId: "tic-toc-5d009",
+      storageBucket: "tic-toc-5d009.firebasestorage.app",
+      messagingSenderId: "430888007998",
+      appId: "1:430888007998:web:8b441ece3ac77af3c7d46f",
+      measurementId: "G-Z4TQWZBGZG",
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    var database = firebase.database();
+
+    var joinGameDiv = document.getElementById("join-game");
+    var waitingScreen = document.getElementById("waiting-screen");
+    var gameContainer = document.getElementById("game-container");
+    var playButton = document.getElementById("play-button");
+    var cancelButton = document.getElementById("cancel-button");
+    var playerNameInput = document.getElementById("player-name");
+    var gameBoard = document.getElementById("game-board");
+    var messages = document.getElementById("messages");
+    var timer = document.getElementById("timer");
+    var vsDisplay = document.getElementById("vs-display");
+    var currentTurnDisplay = document.getElementById("current-turn");
+    var endScreen = document.getElementById("end-screen");
+    var endMessage = document.getElementById("end-message");
+    var playAgainButton = document.getElementById("play-again-button");
+    var homeButton = document.getElementById("home-button");
+
+    var playerName = "";
+    var opponentName = "";
+    var playerSymbol = "";
+    var currentPlayer = "";
+    var timeoutId;
+    var gameActive = true;
+
+    var playersRef = database.ref("tic-tac-toe/players");
+    var gameRef = database.ref("tic-tac-toe/game");
+    var playAgainRef = database.ref("tic-tac-toe/game/play-again");
+
+    playButton.onclick = function () {
+  playerName = playerNameInput.value.trim();
+  if (!playerName) {
+    alert("Please enter your name");
+    return;
   }
 
-  function displayRecentChats() {
-    recentChatsContainer.innerHTML = "";
-    db.ref("users/" + userName + "/recentChats").on("value", function (snapshot) {
-      var chats = snapshot.val() || {};
-      for (var chatUser in chats) {
-        var chatButton = document.createElement("button");
-        chatButton.textContent = chatUser;
-        chatButton.onclick = function () {
-          startPrivateChat(chatUser);
-        };
-        recentChatsContainer.appendChild(chatButton);
+  joinGameDiv.style.display = "none";
+  waitingScreen.style.display = "block";
+  cancelButton.style.display = "inline";
+
+  var playerData = {
+    name: playerName,
+    symbol: "X",
+  };
+
+  playersRef.child(playerName).set(playerData);
+
+  timeoutId = setTimeout(function () {
+    playersRef.child(playerName).remove();
+    alert("No match found. You have been removed from the list.");
+    waitingScreen.style.display = "none";
+    joinGameDiv.style.display = "block";
+    cancelButton.style.display = "none";
+  }, 30000);
+
+  playersRef.on("value", function (snapshot) {
+    var players = snapshot.val();
+    if (!players || Object.keys(players).length < 2) return;
+
+    var playerKeys = Object.keys(players);
+    var player1 = playerKeys[0];
+    var player2 = playerKeys[1];
+
+    if (player1 === playerName || player2 === playerName) {
+      clearTimeout(timeoutId);
+      opponentName = player1 === playerName ? players[player2].name : players[player1].name;
+      playerSymbol = player1 === playerName ? "X" : "O";
+
+      // Generate a unique game ID using Firebase's push method
+      var newGameRef = gameRef.push();
+
+      // Set the game data under the unique ID
+      newGameRef.set({
+        board: ["", "", "", "", "", "", "", "", ""],
+        turn: "X",
+        players: [player1, player2],
+        winner: "",  // Initially no winner
+      });
+
+      waitingScreen.style.display = "none";
+      gameContainer.style.display = "block";
+      vsDisplay.textContent = playerName + " VS " + opponentName;
+
+      // Remove players from the list after the game starts
+      playersRef.remove();
+    }
+  });
+};
+
+
+    cancelButton.onclick = function () {
+      playersRef.child(playerName).remove();
+      clearTimeout(timeoutId);
+      waitingScreen.style.display = "none";
+      joinGameDiv.style.display = "block";
+      cancelButton.style.display = "none";
+    };
+
+    gameRef.on("value", function (snapshot) {
+      var data = snapshot.val();
+      if (!data) return;
+
+      currentPlayer = data.turn;
+      var board = data.board;
+
+      var cells = gameBoard.getElementsByTagName("td");
+      for (var i = 0; i < cells.length; i++) {
+        cells[i].textContent = board[i];
+        cells[i].className = board[i] ? "taken" : "";
+      }
+
+      currentTurnDisplay.textContent =
+        currentPlayer === playerSymbol ? "Your Turn" : opponentName + "'s Turn";
+
+      var winner = checkWinner(board);
+      if (winner) {
+        var winnerName = winner === "X" ? playerName : opponentName;
+        endMessage.textContent =
+          winner === "Draw"
+            ? "It's a draw!"
+            : winnerName + " wins!";
+        endScreen.style.display = "block";
+        gameContainer.style.display = "none";
+        playAgainButton.style.display = "inline";
+        homeButton.style.display = "inline";
+
+        // Show winner's name on both players' screens
+        vsDisplay.textContent = winnerName + " wins!";
       }
     });
-  }
 
-  worldChatBtn.onclick = function () {
-    mainInterface.style.display = "none";
-    worldChatSection.style.display = "block";
-    loadWorldChatMessages();
-  };
+    gameBoard.onclick = function (event) {
+      var target = event.target;
+      if (target.tagName !== "TD" || target.className === "taken" || currentPlayer !== playerSymbol) {
+        return;
+      }
 
-  backToMainBtn.onclick = function () {
-    worldChatSection.style.display = "none";
-    mainInterface.style.display = "block";
-  };
-
-  function loadWorldChatMessages() {
-    chatBox.innerHTML = "";
-    db.ref("world-chat").limitToLast(15).on("value", function (snapshot) {
-      snapshot.forEach(function (childSnapshot) {
-        var message = childSnapshot.val();
-        var messageDiv = document.createElement("div");
-        messageDiv.textContent = message.sender + ": " + message.text;
-        chatBox.appendChild(messageDiv);
-      });
-    });
-  }
-
-  sendWorldMessageBtn.onclick = function () {
-    var message = messageInput.value.trim();
-    if (message) {
-      db.ref("world-chat").push({ sender: userName, text: message, timestamp: Date.now() });
-      messageInput.value = "";
-    }
-  };
-
-  function startPrivateChat(chatUser) {
-    mainInterface.style.display = "none";
-    privateChatSection.style.display = "block";
-    chatWithTitle.textContent = "Chat with " + chatUser;
-
-    loadPrivateChatMessages(chatUser);
-
-    sendPrivateMessageBtn.onclick = function () {
-      sendPrivateMessage(chatUser);
+      var cellIndex = target.getAttribute("data-cell");
+      gameRef.child("board").child(cellIndex).set(playerSymbol);
+      gameRef.child("turn").set(playerSymbol === "X" ? "O" : "X");
     };
 
-    backToMainFromPrivateBtn.onclick = function () {
-      privateChatSection.style.display = "none";
-      mainInterface.style.display = "block";
-    };
-  }
+    playAgainButton.onclick = function () {
+      if (gameActive) {
+        playAgainRef.set({
+          inviter: playerName,
+          invitee: opponentName,
+          status: "pending",
+        });
 
-  function loadPrivateChatMessages(chatUser) {
-    privateChatBox.innerHTML = "";
-    var chatRef = db.ref("private-chats/" + userName + "-" + chatUser).limitToLast(15);
-    chatRef.on("value", function (snapshot) {
-      snapshot.forEach(function (childSnapshot) {
-        var message = childSnapshot.val();
-        var messageDiv = document.createElement("div");
-        messageDiv.textContent = message.sender + ": " + message.text;
-        privateChatBox.appendChild(messageDiv);
+        gameActive = false; // Prevent multiple invites
+        endMessage.textContent = "Invitation sent to " + opponentName + "...";
+      }
+
+      playAgainRef.on("value", function (snapshot) {
+        var data = snapshot.val();
+        if (!data) return;
+
+        if (data.invitee === playerName && data.status === "pending") {
+          var confirmed = confirm(data.inviter + " wants to play again. Do you accept?");
+          playAgainRef.set({
+            inviter: data.inviter,
+            invitee: data.invitee,
+            status: confirmed ? "accepted" : "declined",
+          });
+        } else if (data.status === "accepted") {
+          resetGame();
+        } else if (data.status === "declined" && data.inviter === playerName) {
+          endMessage.textContent = opponentName + " declined your Play Again request.";
+        }
       });
-    });
-  }
+    };
 
-  function sendPrivateMessage(chatUser) {
-    var message = privateMessageInput.value.trim();
-    if (message) {
-      var chatRef = db.ref("private-chats/" + userName + "-" + chatUser);
-      chatRef.push({ sender: userName, text: message, timestamp: Date.now() });
-      privateMessageInput.value = "";
+    homeButton.onclick = function () {
+      endScreen.style.display = "none";
+      joinGameDiv.style.display = "block";
+    };
+
+    // Modify the checkWinner function to set the winner in the game state
+function checkWinner(board) {
+  const winningCombinations = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
+
+  for (var i = 0; i < winningCombinations.length; i++) {
+    var [a, b, c] = winningCombinations[i];
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+      // Return 'X' or 'O' to indicate the winner
+      return board[a];
     }
   }
-})();
+  return board.includes("") ? null : "Draw";
+}
 
-  
-</script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-<script src="script.js"></script>
+gameRef.on("child_changed", function (snapshot) {
+  var gameId = snapshot.key;  // The unique game ID
+  var data = snapshot.val();
+  if (!data) return;
+
+  currentPlayer = data.turn;
+  var board = data.board;
+
+  var cells = gameBoard.getElementsByTagName("td");
+  for (var i = 0; i < cells.length; i++) {
+    cells[i].textContent = board[i];
+    cells[i].className = board[i] ? "taken" : "";
+  }
+
+  currentTurnDisplay.textContent =
+    currentPlayer === playerSymbol ? "Your Turn" : opponentName + "'s Turn";
+
+  var winner = checkWinner(board);
+  if (winner) {
+    var winnerName =
+      winner === "X"
+        ? data.players[0] === playerName
+          ? playerName
+          : opponentName
+        : data.players[1] === playerName
+        ? playerName
+        : opponentName;
+
+    // Update the winner in the unique game instance
+    firebase.database().ref("tic-tac-toe/game/" + gameId).child("winner").set(winnerName); 
+
+    endMessage.textContent =
+      winner === "Draw"
+        ? "It's a draw!"
+        : winnerName + " wins!";
+    endScreen.style.display = "block";
+    gameContainer.style.display = "none";
+    playAgainButton.style.display = "inline";
+    homeButton.style.display = "inline";
+
+    // Show the winner's name on both players' screens
+    vsDisplay.textContent = winnerName + " wins!";
+  }
+});
+
+
+    function resetGame(gameId) {
+  firebase.database().ref("tic-tac-toe/game/" + gameId).set({
+    board: ["", "", "", "", "", "", "", "", ""],
+    turn: "X",
+    players: [playerName, opponentName],
+    winner: "",
+  });
+
+  endScreen.style.display = "none";
+  gameContainer.style.display = "block";
+  gameActive = true;
+}
+
+        // Navigation function
+    function nav(move) {
+      const currentIndex = document.activeElement;
+      const items = document.querySelectorAll('.navItem');
+      let currentElemIdx = [...items].indexOf(currentIndex);
+      const next = currentElemIdx + move;
+      let targetElement = items[next];
+      if (targetElement) targetElement.focus();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === "ArrowDown") nav(1);
+      if (e.key === "ArrowUp") nav(-1);
+    });
+  </script>
 </body>
 </html>
