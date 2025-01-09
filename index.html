@@ -3,460 +3,257 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tic Tac Toe Multiplayer</title>
+  <title>Chat App</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     body {
-      font-family: 'Arial', sans-serif;
-      text-align: center;
-      background: linear-gradient(to bottom, #6a11cb, #2575fc);
-      color: #fff;
+      font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      height: 100vh;
-      overflow: hidden;
+      background-color: #f4f4f9;
     }
-
-    h1 {
-      font-size: 22px;
-      padding: 15px;
-      margin: 0;
-      background: #333;
-      color: #fff;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-    }
-
-    header {
-      padding: 10px;
-      background: #444;
-      color: #fff;
-      font-size: 18px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-
-    #game-container,
-    #waiting-screen,
-    #end-screen {
+    #mainPage, #chatPage {
       display: none;
-      padding: 15px;
     }
-
-    #join-game input {
-      width: 90%;
-      padding: 10px;
-      margin-bottom: 15px;
-      border: none;
-      border-radius: 25px;
-      font-size: 16px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    #mainPage.active, #chatPage.active {
+      display: block;
     }
-
-    #join-game button,
-    #play-again-button,
-    #home-button,
-    #cancel-button {
-      display: inline-block;
-      background: linear-gradient(45deg, #ff5722, #ff9800);
-      color: #fff;
-      padding: 10px 20px;
-      margin: 10px;
-      border: none;
-      border-radius: 25px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    table {
-      margin: 20px auto;
-      border-collapse: collapse;
-      width: 90%;
-    }
-
-    td {
-      width: 70px;
-      height: 70px;
-      border: 2px solid #333;
-      font-size: 28px;
+    header {
       text-align: center;
-      vertical-align: middle;
-      background: #fff;
-      color: #444;
-      cursor: pointer;
-      border-radius: 10px;
-      transition: background 0.3s ease, transform 0.2s ease;
+      font-size: 22px;
+      font-weight: bold;
+      padding: 15px;
+      background-color: #007BFF;
+      color: white;
+      border-bottom: 2px solid #0056b3;
     }
-
-    footer {
-      position: absolute;
-      bottom: 0;
+    input, button {
       width: 100%;
-      padding: 10px 0;
-      background: #333;
-      color: #fff;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+    #worldChatButton, .user, #backButton {
+      background-color: #28a745;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+    #worldChatButton:hover, .user:hover, #backButton:hover {
+      background-color: #218838;
+    }
+    #privateChatList {
+      margin-top: 10px;
+    }
+    .user {
+      padding: 10px;
+      border: 1px solid #ccc;
+      margin-bottom: 5px;
+      border-radius: 5px;
+      text-align: center;
+    }
+    #chatBox {
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 10px;
+      height: 400px;
+      overflow-y: auto;
+      background-color: white;
+      margin-top: 10px;
+    }
+    #messageInputContainer {
+      margin-top: 10px;
+    }
+    .message {
+      margin-bottom: 5px;
+      padding: 8px;
+      border-radius: 5px;
       font-size: 14px;
     }
-
-    .navItem:focus {
-      outline: 3px solid #03a9f4;
+    .message.sent {
+      background-color: #d1e7dd;
+      text-align: right;
+    }
+    .message.received {
+      background-color: #f8d7da;
+      text-align: left;
+    }
+    .empty-message {
+      text-align: center;
+      color: gray;
+      margin-top: 50px;
+      font-size: 16px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Tic Tac Toe Multiplayer</h1>
-    <div id="join-game">
-      <input type="text" id="player-name" placeholder="Enter your name" class="navItem" />
-      <button id="play-button" class="navItem">Play</button>
-      <button id="cancel-button" class="navItem" style="display: none;">Cancel</button>
-    </div>
-
-    <div id="waiting-screen">
-      <h2>Waiting for another player...</h2>
-      <p id="timer">Removing in 30 seconds...</p>
-    </div>
-
-    <div id="game-container">
-      <div id="vs-display"></div>
-      <div id="current-turn"></div>
-      <table id="game-board">
-        <tr>
-          <td data-cell="0" class="navItem" tabindex="0"></td>
-          <td data-cell="1" class="navItem" tabindex="0"></td>
-          <td data-cell="2" class="navItem" tabindex="0"></td>
-        </tr>
-        <tr>
-          <td data-cell="3" class="navItem" tabindex="0"></td>
-          <td data-cell="4" class="navItem" tabindex="0"></td>
-          <td data-cell="5" class="navItem" tabindex="0"></td>
-        </tr>
-        <tr>
-          <td data-cell="6" class="navItem" tabindex="0"></td>
-          <td data-cell="7" class="navItem" tabindex="0"></td>
-          <td data-cell="8" class="navItem" tabindex="0"></td>
-        </tr>
-      </table>
-      <div id="messages"></div>
-    </div>
-
-    <div id="end-screen">
-      <div id="end-message"></div>
-      <div id="end-buttons">
-        <button id="play-again-button" class="navItem" style="display: none;">Play Again</button>
-        <button id="home-button" class="navItem" style="display: none;">Home</button>
-      </div>
+  <!-- Main Page -->
+  <div id="mainPage" class="active">
+    <header>Chat App</header>
+    <input type="text" id="searchInput" placeholder="Search for a user" />
+    <button id="searchButton">Search</button>
+    <button id="worldChatButton">World Chat</button>
+    <div id="privateChatList">
+      <h4>Your Private Chats:</h4>
     </div>
   </div>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-  
+
+  <!-- Chat Page -->
+  <div id="chatPage">
+    <header id="chatHeader">Chat</header>
+    <div id="chatBox">
+      <div class="empty-message">No messages yet. Start the conversation!</div>
+    </div>
+    <div id="messageInputContainer">
+      <input type="text" id="messageInput" placeholder="Enter your message" />
+      <button id="sendButton">Send</button>
+    </div>
+    <button id="backButton" style="margin-top: 10px;">Back</button>
+  </div>
+
   <script>
-    // Navigation logic
-    function nav(move) {
-      const currentElement = document.activeElement;
-      const items = document.querySelectorAll('.navItem');
-      const currentIndex = [...items].indexOf(currentElement);
-      const nextIndex = currentIndex + move;
-
-      if (items[nextIndex]) {
-        items[nextIndex].focus();
-      }
-    }
-
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'ArrowDown') nav(1);
-      if (event.key === 'ArrowUp') nav(-1);
-    });
-
-
     // Firebase configuration
-    var firebaseConfig = {
-      apiKey: "AIzaSyAgyQsexCYpV0BGfylksrBrdLUTyyCRBHs",
-      authDomain: "tic-toc-5d009.firebaseapp.com",
-      databaseURL: "https://tic-toc-5d009-default-rtdb.firebaseio.com",
-      projectId: "tic-toc-5d009",
-      storageBucket: "tic-toc-5d009.firebasestorage.app",
-      messagingSenderId: "430888007998",
-      appId: "1:430888007998:web:8b441ece3ac77af3c7d46f",
-      measurementId: "G-Z4TQWZBGZG",
+    const firebaseConfig = {
+      apiKey: "AIzaSyCE5gLp99K4IUq6V-BhlmgOcTtTjjG6WpU",
+      authDomain: "chat-app-9d3d2.firebaseapp.com",
+      databaseURL: "https://chat-app-9d3d2-default-rtdb.firebaseio.com",
+      projectId: "chat-app-9d3d2",
+      storageBucket: "chat-app-9d3d2.firebasestorage.app",
+      messagingSenderId: "110218700281",
+      appId: "1:110218700281:web:470b92a7e4b223a0660928",
+      measurementId: "G-PZKV7JTD5K"
     };
 
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
-    var database = firebase.database();
 
-    var joinGameDiv = document.getElementById("join-game");
-    var waitingScreen = document.getElementById("waiting-screen");
-    var gameContainer = document.getElementById("game-container");
-    var playButton = document.getElementById("play-button");
-    var cancelButton = document.getElementById("cancel-button");
-    var playerNameInput = document.getElementById("player-name");
-    var gameBoard = document.getElementById("game-board");
-    var messages = document.getElementById("messages");
-    var timer = document.getElementById("timer");
-    var vsDisplay = document.getElementById("vs-display");
-    var currentTurnDisplay = document.getElementById("current-turn");
-    var endScreen = document.getElementById("end-screen");
-    var endMessage = document.getElementById("end-message");
-    var playAgainButton = document.getElementById("play-again-button");
-    var homeButton = document.getElementById("home-button");
+    // Global variables
+    let currentChatType = null;
+    let username = localStorage.getItem("username");
 
-    var playerName = "";
-    var opponentName = "";
-    var playerSymbol = "";
-    var currentPlayer = "";
-    var timeoutId;
-    var gameActive = true;
-
-    var playersRef = database.ref("tic-tac-toe/players");
-    var gameRef = database.ref("tic-tac-toe/game");
-    var playAgainRef = database.ref("tic-tac-toe/game/play-again");
-
-    playButton.onclick = function () {
-  playerName = playerNameInput.value.trim();
-  if (!playerName) {
-    alert("Please enter your name");
-    return;
-  }
-
-  joinGameDiv.style.display = "none";
-  waitingScreen.style.display = "block";
-  cancelButton.style.display = "inline";
-
-  var playerData = {
-    name: playerName,
-    symbol: "X",
-  };
-
-  playersRef.child(playerName).set(playerData);
-
-  timeoutId = setTimeout(function () {
-    playersRef.child(playerName).remove();
-    alert("No match found. You have been removed from the list.");
-    waitingScreen.style.display = "none";
-    joinGameDiv.style.display = "block";
-    cancelButton.style.display = "none";
-  }, 30000);
-
-  playersRef.on("value", function (snapshot) {
-    var players = snapshot.val();
-    if (!players || Object.keys(players).length < 2) return;
-
-    var playerKeys = Object.keys(players);
-    var player1 = playerKeys[0];
-    var player2 = playerKeys[1];
-
-    if (player1 === playerName || player2 === playerName) {
-      clearTimeout(timeoutId);
-      opponentName = player1 === playerName ? players[player2].name : players[player1].name;
-      playerSymbol = player1 === playerName ? "X" : "O";
-
-      // Generate a unique game ID using Firebase's push method
-      var newGameRef = gameRef.push();
-
-      // Set the game data under the unique ID
-      newGameRef.set({
-        board: ["", "", "", "", "", "", "", "", ""],
-        turn: "X",
-        players: [player1, player2],
-        winner: "",  // Initially no winner
-      });
-
-      waitingScreen.style.display = "none";
-      gameContainer.style.display = "block";
-      vsDisplay.textContent = playerName + " VS " + opponentName;
-
-      // Remove players from the list after the game starts
-      playersRef.remove();
-    }
-  });
-};
-
-
-    cancelButton.onclick = function () {
-      playersRef.child(playerName).remove();
-      clearTimeout(timeoutId);
-      waitingScreen.style.display = "none";
-      joinGameDiv.style.display = "block";
-      cancelButton.style.display = "none";
-    };
-
-    gameRef.on("value", function (snapshot) {
-      var data = snapshot.val();
-      if (!data) return;
-
-      currentPlayer = data.turn;
-      var board = data.board;
-
-      var cells = gameBoard.getElementsByTagName("td");
-      for (var i = 0; i < cells.length; i++) {
-        cells[i].textContent = board[i];
-        cells[i].className = board[i] ? "taken" : "";
-      }
-
-      currentTurnDisplay.textContent =
-        currentPlayer === playerSymbol ? "Your Turn" : opponentName + "'s Turn";
-
-      var winner = checkWinner(board);
-      if (winner) {
-        var winnerName = winner === "X" ? playerName : opponentName;
-        endMessage.textContent =
-          winner === "Draw"
-            ? "It's a draw!"
-            : winnerName + " wins!";
-        endScreen.style.display = "block";
-        gameContainer.style.display = "none";
-        playAgainButton.style.display = "inline";
-        homeButton.style.display = "inline";
-
-        // Show winner's name on both players' screens
-        vsDisplay.textContent = winnerName + " wins!";
-      }
-    });
-
-    gameBoard.onclick = function (event) {
-      var target = event.target;
-      if (target.tagName !== "TD" || target.className === "taken" || currentPlayer !== playerSymbol) {
-        return;
-      }
-
-      var cellIndex = target.getAttribute("data-cell");
-      gameRef.child("board").child(cellIndex).set(playerSymbol);
-      gameRef.child("turn").set(playerSymbol === "X" ? "O" : "X");
-    };
-
-    playAgainButton.onclick = function () {
-      if (gameActive) {
-        playAgainRef.set({
-          inviter: playerName,
-          invitee: opponentName,
-          status: "pending",
-        });
-
-        gameActive = false; // Prevent multiple invites
-        endMessage.textContent = "Invitation sent to " + opponentName + "...";
-      }
-
-      playAgainRef.on("value", function (snapshot) {
-        var data = snapshot.val();
-        if (!data) return;
-
-        if (data.invitee === playerName && data.status === "pending") {
-          var confirmed = confirm(data.inviter + " wants to play again. Do you accept?");
-          playAgainRef.set({
-            inviter: data.inviter,
-            invitee: data.invitee,
-            status: confirmed ? "accepted" : "declined",
+    // On page load, prompt for username
+    window.onload = function () {
+      if (!username) {
+        username = prompt("Please enter your name:");
+        if (username) {
+          localStorage.setItem("username", username);
+          firebase.database().ref("users/" + username).set({
+            name: username,
+            timestamp: Date.now(),
           });
-        } else if (data.status === "accepted") {
-          resetGame();
-        } else if (data.status === "declined" && data.inviter === playerName) {
-          endMessage.textContent = opponentName + " declined your Play Again request.";
+        }
+      }
+      loadPrivateChats();
+    };
+
+    // Elements
+    const mainPage = document.getElementById("mainPage");
+    const chatPage = document.getElementById("chatPage");
+    const chatHeader = document.getElementById("chatHeader");
+    const chatBox = document.getElementById("chatBox");
+    const privateChatList = document.getElementById("privateChatList");
+    const messageInput = document.getElementById("messageInput");
+
+    // Prevent duplicate messages
+    const displayedMessages = new Set();
+
+    // Switch to chat page
+    function openChat(chatType) {
+      currentChatType = chatType;
+      mainPage.classList.remove("active");
+      chatPage.classList.add("active");
+      chatHeader.textContent = chatType === "world" ? "World Chat" : `Chat with ${chatType}`;
+      chatBox.innerHTML = '<div class="empty-message">No messages yet. Start the conversation!</div>';
+      displayedMessages.clear();
+
+      const chatRef = chatType === "world"
+        ? firebase.database().ref("worldChat")
+        : firebase.database().ref("privateChats/" + username + "/" + chatType);
+
+      chatRef.on("child_added", function (snapshot) {
+        const data = snapshot.val();
+        const messageId = snapshot.key;
+        if (displayedMessages.has(messageId)) return; // Prevent duplicate
+        displayedMessages.add(messageId);
+
+        const messageElement = document.createElement("div");
+        messageElement.className = "message";
+        messageElement.classList.add(data.from === username ? "sent" : "received");
+        messageElement.textContent = `${data.from}: ${data.message}`;
+        chatBox.appendChild(messageElement);
+        chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll
+      });
+    }
+
+    // Back to main page
+    document.getElementById("backButton").onclick = function () {
+      chatPage.classList.remove("active");
+      mainPage.classList.add("active");
+    };
+
+    // Load private chats
+    function loadPrivateChats() {
+      privateChatList.innerHTML = "<h4>Your Private Chats:</h4>";
+      firebase.database().ref("privateChats/" + username).on("child_added", function (snapshot) {
+        const partnerName = snapshot.key;
+        const userElement = document.createElement("div");
+        userElement.className = "user";
+        userElement.textContent = partnerName;
+        userElement.onclick = function () {
+          openChat(partnerName);
+        };
+        privateChatList.appendChild(userElement);
+      });
+    }
+
+    // Search for a user
+    document.getElementById("searchButton").onclick = function () {
+      const searchName = document.getElementById("searchInput").value.trim();
+      if (!searchName) return alert("Please enter a name.");
+      firebase.database().ref("users/" + searchName).once("value", function (snapshot) {
+        if (snapshot.exists()) {
+          alert("User found! Starting private chat...");
+          openChat(searchName);
+        } else {
+          alert("User not found.");
         }
       });
     };
 
-    homeButton.onclick = function () {
-      endScreen.style.display = "none";
-      joinGameDiv.style.display = "block";
+    // Send message
+    document.getElementById("sendButton").onclick = function () {
+      const message = messageInput.value.trim();
+      if (!message) return;
+
+      const chatRef = currentChatType === "world"
+        ? firebase.database().ref("worldChat").push()
+        : firebase.database().ref("privateChats/" + username + "/" + currentChatType).push();
+
+      chatRef.set({
+        from: username,
+        message: message,
+        timestamp: Date.now(),
+      });
+
+      if (currentChatType !== "world") {
+        firebase.database().ref("privateChats/" + currentChatType + "/" + username).push().set({
+          from: username,
+          message: message,
+          timestamp: Date.now(),
+        });
+      }
+
+      messageInput.value = "";
     };
 
-    // Modify the checkWinner function to set the winner in the game state
-function checkWinner(board) {
-  const winningCombinations = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6],
-  ];
-
-  for (var i = 0; i < winningCombinations.length; i++) {
-    var [a, b, c] = winningCombinations[i];
-    if (board[a] && board[a] === board[b] && board[a] === board[c]) {
-      // Return 'X' or 'O' to indicate the winner
-      return board[a];
-    }
-  }
-  return board.includes("") ? null : "Draw";
-}
-
-gameRef.on("child_changed", function (snapshot) {
-  var gameId = snapshot.key;  // The unique game ID
-  var data = snapshot.val();
-  if (!data) return;
-
-  currentPlayer = data.turn;
-  var board = data.board;
-
-  var cells = gameBoard.getElementsByTagName("td");
-  for (var i = 0; i < cells.length; i++) {
-    cells[i].textContent = board[i];
-    cells[i].className = board[i] ? "taken" : "";
-  }
-
-  currentTurnDisplay.textContent =
-    currentPlayer === playerSymbol ? "Your Turn" : opponentName + "'s Turn";
-
-  var winner = checkWinner(board);
-  if (winner) {
-    var winnerName =
-      winner === "X"
-        ? data.players[0] === playerName
-          ? playerName
-          : opponentName
-        : data.players[1] === playerName
-        ? playerName
-        : opponentName;
-
-    // Update the winner in the unique game instance
-    firebase.database().ref("tic-tac-toe/game/" + gameId).child("winner").set(winnerName); 
-
-    endMessage.textContent =
-      winner === "Draw"
-        ? "It's a draw!"
-        : winnerName + " wins!";
-    endScreen.style.display = "block";
-    gameContainer.style.display = "none";
-    playAgainButton.style.display = "inline";
-    homeButton.style.display = "inline";
-
-    // Show the winner's name on both players' screens
-    vsDisplay.textContent = winnerName + " wins!";
-  }
-});
-
-
-    function resetGame(gameId) {
-  firebase.database().ref("tic-tac-toe/game/" + gameId).set({
-    board: ["", "", "", "", "", "", "", "", ""],
-    turn: "X",
-    players: [playerName, opponentName],
-    winner: "",
-  });
-
-  endScreen.style.display = "none";
-  gameContainer.style.display = "block";
-  gameActive = true;
-}
-
-        // Navigation function
-    function nav(move) {
-      const currentIndex = document.activeElement;
-      const items = document.querySelectorAll('.navItem');
-      let currentElemIdx = [...items].indexOf(currentIndex);
-      const next = currentElemIdx + move;
-      let targetElement = items[next];
-      if (targetElement) targetElement.focus();
-    }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === "ArrowDown") nav(1);
-      if (e.key === "ArrowUp") nav(-1);
-    });
+    // World chat button
+    document.getElementById("worldChatButton").onclick = function () {
+      openChat("world");
+    };
   </script>
 </body>
 </html>
