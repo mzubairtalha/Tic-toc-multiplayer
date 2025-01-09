@@ -174,7 +174,9 @@
         ? firebase.database().ref("worldChat")
         : firebase.database().ref("privateChats/" + username + "/" + chatType);
 
-      chatRef.on("child_added", function (snapshot) {
+      // Load last 2 messages for World Chat and last 15 for Private Chats
+      const limit = chatType === "world" ? 2 : 15;
+      chatRef.orderByChild('timestamp').limitToLast(limit).on("child_added", function (snapshot) {
         const data = snapshot.val();
         const messageId = snapshot.key;
         if (displayedMessages.has(messageId)) return; // Prevent duplicate
@@ -218,11 +220,24 @@
         if (snapshot.exists()) {
           alert("User found! Starting private chat...");
           openChat(searchName);
+          updatePrivateChatList(username, searchName); // Add to both users' private chat list
         } else {
           alert("User not found.");
         }
       });
     };
+
+    // Update private chat list for both users
+    function updatePrivateChatList(user1, user2) {
+      firebase.database().ref("privateChats/" + user1).child(user2).set({
+        name: user2,
+        timestamp: Date.now(),
+      });
+      firebase.database().ref("privateChats/" + user2).child(user1).set({
+        name: user1,
+        timestamp: Date.now(),
+      });
+    }
 
     // Send message
     document.getElementById("sendButton").onclick = function () {
